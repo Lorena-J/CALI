@@ -1,0 +1,6 @@
+PySide6
+pyqtgraph
+opencv-python
+tifffile
+pandas
+numpy
