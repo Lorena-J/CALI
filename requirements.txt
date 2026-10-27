@@ -4,3 +4,4 @@ opencv-python
 tifffile
 pandas
 numpy
+h5py
