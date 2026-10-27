@@ -1148,7 +1148,7 @@ class Viewer(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MINISYNC")
+        self.setWindowTitle("CALI")
         self.resize(1440, 860)
         self.setMinimumSize(1180, 760)
         self.day_mode = True
@@ -1221,7 +1221,7 @@ class Viewer(QMainWindow):
             pm = QPixmap(str(logo_path))
             logo.setPixmap(pm.scaled(76, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
-        title = QLabel("MINISYNC")
+        title = QLabel("CALI")
         title.setObjectName("appTitle")
         brand_row.addWidget(logo)
         brand_row.addWidget(title)
@@ -3062,7 +3062,7 @@ class Viewer(QMainWindow):
     def closeEvent(self, e):
         processing = getattr(self, "_calcium_processing_dialog", None)
         if processing is not None and processing.is_running():
-            QMessageBox.warning(self, "Calcium processing", "Cancel the active processing job before closing MINISYNC.")
+            QMessageBox.warning(self, "Calcium processing", "Cancel the active processing job before closing CALI.")
             e.ignore()
             return
         if processing is not None:

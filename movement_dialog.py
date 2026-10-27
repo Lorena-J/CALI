@@ -26,7 +26,7 @@ class MovementAnalysisDialog(QDialog):
         self.numeric_data = {}
         self.summary = self.context = self.behavior = None
         self.generation = 0
-        self.setWindowTitle("MINISYNC · Movement analysis")
+        self.setWindowTitle("CALI · Movement analysis")
         self.resize(1140, 850)
         self.setMinimumSize(1000, 760)
         self.build_ui()

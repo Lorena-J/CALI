@@ -1,6 +1,9 @@
-# MINISYNC
+# CALI
 
-Desktop viewer for aligning Mini2P imaging and behavior-camera TTL streams.
+**CA**lcium **LI**nked Behavior explorer: a desktop viewer for aligning Mini2P
+imaging and behavior-camera TTL streams.
+
+Formerly called MINISYNC.
 
 Run:
 
@@ -28,8 +31,10 @@ Toeplitz matrix handling used by this CaImAn release's deconvolution.
 
 The viewer and worker use separate Python environments when needed. The engine
 is located automatically in the current environment or a sibling Conda environment
-named `caiman` or `minisync-caiman`; interpreter paths are not exposed in the UI.
-For custom installations, set the `MINISYNC_CAIMAN_PYTHON` environment variable.
+named `caiman` or `cali-caiman` (the older `minisync-caiman` name is still
+detected); interpreter paths are not exposed in the UI. For custom installations,
+set the `CALI_CAIMAN_PYTHON` environment variable (`MINISYNC_CAIMAN_PYTHON` is
+still accepted).
 For the current development
 machine, launch the viewer with `conda activate mini2p-sync`; its existing
 `caiman` environment already contains the processing engine.
@@ -51,8 +56,9 @@ for platform requirements, including Intel/Rosetta environments on Apple Silicon
    frame, neuron size, decay time and quality thresholds. These are starting
    parameters, not validated Mini2P presets. At least 100 selected-channel samples
    are required; multiplane/flyback, RGB and incomplete channel cycles are rejected.
-5. Choose **Run analysis**. A new `minisync_results/calcium_*` folder is created
-   beside the source TIFF. Originals and previous runs are preserved. For both
+5. Choose **Run analysis**. A new `cali_results/calcium_*` folder is created
+   beside the source TIFF (runs made before the rename are in `minisync_results/`).
+   Originals and previous runs are preserved. For both
    channels, outputs are stored in separate `channel_*` subfolders with `batch.json`.
 6. Completed results open automatically in the main viewer, using the corrected
    TIFF and configured frame origin. The setup window closes and **Calcium** is
@@ -119,7 +125,7 @@ pending.
 ## CaImAn CNMF results
 
 Load **CaImAn HDF5** to open a `.hdf5` or `.h5` result saved with
-`cnm.save(...)`. MINISYNC reads the file directly with `h5py`; installing or
+`cnm.save(...)`. CALI reads the file directly with `h5py`; installing or
 running the CaImAn analysis pipeline is not required. NWB and pickle results
 are not supported by this importer.
 
@@ -129,7 +135,7 @@ In the **Calcium** tab:
   saved by CaImAn. Files without quality evaluation show all components.
 - Choose `C` (denoised temporal component), `C + YrA` (including residuals),
   `F_dff` (ΔF/F), or `S` (deconvolved activity), when present in the file.
-  MINISYNC displays saved results without recalculating normalization or
+  CALI displays saved results without recalculating normalization or
   deconvolution; `C` is not labelled as raw fluorescence, and `S` is not a
   measured spike train.
 - Traces can be inspected without TTLs using movie frames. Load the Mini2P TTL CSV to synchronize traces with both image viewers.
@@ -165,7 +171,7 @@ and [HDF5 serialization](https://github.com/flatironinstitute/CaImAn/blob/main/c
 
 Validation includes synthetic CNMF-layout fixtures and a full CaImAn 1.12.1
 CNMF fit of the official `demoMovie.tif` (2,000 frames, 15 components), with
-trace, tracking, crop, trim and aligned-video exports checked in MINISYNC.
+trace, tracking, crop, trim and aligned-video exports checked in CALI.
 The demo's timestamps, behavior and tracking are explicitly simulated;
 synchronization with real acquisition clocks remains to be validated.
 

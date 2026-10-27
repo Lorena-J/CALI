@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare raw inputs for testing MINISYNC without tracking or precomputed CNMF.
+"""Prepare raw inputs for testing CALI without tracking or precomputed CNMF.
 
 The calcium TIFF is copied unchanged. Behavior and acquisition clocks are
 explicitly simulated and have no biological association with the calcium.
@@ -105,7 +105,7 @@ def create_pack(source, output):
         "generator": "scripts/create_processing_test_pack.py",
     }
     (output / "procedencia.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    guide = f"""# Prueba de corrección de movimiento y CNMF en MINISYNC
+    guide = f"""# Prueba de corrección de movimiento y CNMF en CALI
 
 ## Qué contiene esta carpeta
 
@@ -148,7 +148,7 @@ python sync_viewer.py
    **CNMF patch half-size = 15**, **Minimum SNR = 2**,
    **Spatial correlation threshold = 0.75**.
 6. Pulsa **Run analysis**. El motor CaImAn se localiza automáticamente.
-   Se crea `minisync_results/calcium_*` junto al TIFF; no hay que crearla antes.
+   Se crea `cali_results/calcium_*` junto al TIFF; no hay que crearla antes.
 7. Al terminar, TIFF corregido y resultados se cargan automáticamente en el visor.
    Durante el cálculo, el botón permite **Cancel analysis**.
 
