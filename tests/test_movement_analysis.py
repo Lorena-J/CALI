@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 from movement_analysis import (prepare_speed, align_speed, duration_weights,
                                summarize_cell, pearson, lag_correlations, analyze_cells)
 from movement_dialog import MovementAnalysisDialog
-from sync_viewer import Viewer, TrackingAlignmentDialog
+from cali import Viewer, TrackingAlignmentDialog
 from caiman_results import CaImAnResults
 from test_caiman_results import write_cnmf_fixture
 

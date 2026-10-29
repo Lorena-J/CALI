@@ -1,0 +1,33 @@
+name: Viewer tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  viewer:
+    runs-on: macos-15
+    timeout-minutes: 15
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-lock.txt
+      - name: Install viewer dependencies
+        run: python -m pip install -r requirements-lock.txt
+      - name: Check dependency compatibility
+        run: python -m pip check
+      - name: Run viewer tests
+        run: python -m unittest discover -s tests -v

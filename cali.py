@@ -14,7 +14,8 @@ import tifffile
 from caiman_results import CaImAnResults
 from movement_dialog import MovementAnalysisDialog
 from PySide6.QtCore import Qt, QTimer, Signal, QRect, QPoint, QPointF, QSize, QRectF
-from PySide6.QtGui import QImage, QPixmap, QIcon, QPainter, QPainterPath, QPen, QColor
+from PySide6.QtGui import QImage, QPixmap, QIcon, QPainter, QPainterPath, QPen, QColor, QPalette
+from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFileDialog, QFormLayout, QFrame,
     QGridLayout, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QPushButton, QDialog,
@@ -379,12 +380,14 @@ class ImagePanel(QFrame):
         dot = QLabel("●")
         dot.setObjectName("accentDot")
         dot.setStyleSheet(f"color:{accent};")
+        self.accent_dot = dot
 
         title_label = QLabel(title)
         title_label.setObjectName("panelTitle")
         self.title_label = title_label
 
         header = QHBoxLayout()
+        self.header_layout = header
         header.setSpacing(8)
         header.addWidget(dot)
         header.addWidget(title_label)
@@ -572,9 +575,45 @@ class TrackingAlignmentDialog(QDialog):
                     selection-color: #25675C;
                 }
             """
+        else:
+            for original, replacement in (
+                ("#F3F7F9", "#102131"), ("#FFFFFF", "#14283A"),
+                ("background: white", "background: #193347"),
+                ("#13263A", "#EAF5FA"), ("#102A43", "#EAF5FA"),
+                ("#15364D", "#EAF5FA"), ("#10344D", "#F3E79B"),
+                ("#6A8193", "#91A6B7"), ("#557084", "#B7C7D4"),
+                ("#D9E7EE", "#315067"), ("#C9DCE6", "#315067"),
+                ("#EAF3F7", "#193347"), ("#EDF8FB", "#393448"),
+                ("#8FDDE5", "#73647E"), ("#12BFC0", "#443443"),
+                ("#1479E8", "#393448"),
+            ):
+                stylesheet = stylesheet.replace(original, replacement)
+            stylesheet += """
+                QLabel { color: #EAF5FA; }
+                QComboBox QAbstractItemView {
+                    background: #193347; color: #EAF5FA;
+                    selection-background-color: #393448; selection-color: #F3E79B;
+                }
+                QPushButton[variant="primary"] { color: #FAC484; }
+                QPushButton[variant="blue"] { color: #F3E79B; }
+                QPushButton:disabled { background: #14283A; color: #728596; border-color: #27485D; }
+            """
         self.setStyleSheet(stylesheet)
+        text = "#455D6D" if day_mode else "#C8D7E3"
         for plot in (self.time_plot, self.frame_plot):
-            plot.setBackground("#FAF7F0" if day_mode else "#FFFFFF")
+            plot.setBackground("#FAF7F0" if day_mode else "#14283A")
+            for name in ("bottom", "left"):
+                axis = plot.getAxis(name)
+                axis.setTextPen(pg.mkPen(text))
+                axis.setPen(pg.mkPen("#A9BAC5" if day_mode else "#315067"))
+                axis.setLabel(axis.labelText, units=axis.labelUnits, color=text)
+            legend = plot.plotItem.legend
+            if legend is not None:
+                for _, label in legend.items:
+                    label.setText(label.text, color=text)
+        accent = self.viewer.accent_palette()["mini"]
+        self.aligned_curve.setPen(pg.mkPen(accent, width=2.2))
+        self.frame_curve.setPen(pg.mkPen(accent, width=2.2))
 
     def build_ui(self):
         self.setStyleSheet("""
@@ -1152,6 +1191,7 @@ class Viewer(QMainWindow):
         self.resize(1440, 860)
         self.setMinimumSize(1180, 760)
         self.day_mode = True
+        self.default_palette = QPalette(QApplication.palette())
         self.caiman = None
         self.processing_manifest = None
         self.processing_results = []
@@ -1188,10 +1228,6 @@ class Viewer(QMainWindow):
     def build_ui(self):
         self.setStyleSheet(self.app_stylesheet())
 
-        logo_path = Path(__file__).with_name("mini2p_logo_mark.png")
-        if logo_path.exists():
-            self.setWindowIcon(QIcon(str(logo_path)))
-
         root = QWidget()
         root.setObjectName("root")
         self.setCentralWidget(root)
@@ -1213,18 +1249,12 @@ class Viewer(QMainWindow):
         brand_row = QHBoxLayout()
         brand_row.setSpacing(12)
 
-        logo = QLabel()
-        logo.setObjectName("brandLogo")
-        logo.setFixedSize(78, 52)
-        logo.setAlignment(Qt.AlignCenter)
-        if logo_path.exists():
-            pm = QPixmap(str(logo_path))
-            logo.setPixmap(pm.scaled(76, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-
-        title = QLabel("CALI")
-        title.setObjectName("appTitle")
-        brand_row.addWidget(logo)
-        brand_row.addWidget(title)
+        self.brand_logo = QSvgWidget()
+        self.brand_logo.setObjectName("brandLogo")
+        self.brand_logo.setFixedSize(300, 81)
+        self.brand_logo.setAccessibleName("CALI — Calcium Linked Behavior explorer")
+        brand_row.addStretch()
+        brand_row.addWidget(self.brand_logo)
         brand_row.addStretch()
         side.addLayout(brand_row)
 
@@ -1332,23 +1362,21 @@ class Viewer(QMainWindow):
         main = QVBoxLayout()
         main.setSpacing(13)
 
-        top_bar = QHBoxLayout()
-        top_bar.addStretch()
         self.theme_btn = QPushButton()
         self.theme_btn.setObjectName("themeToggle")
         self.theme_btn.setFixedSize(36, 36)
         self.theme_btn.setIconSize(QSize(22, 22))
         self.theme_btn.setCursor(Qt.PointingHandCursor)
         self.theme_btn.clicked.connect(lambda: self.set_day_mode(not self.day_mode))
-        top_bar.addWidget(self.theme_btn)
-        main.addLayout(top_bar)
 
         split = QSplitter(Qt.Horizontal)
         split.setObjectName("viewerSplitter")
-        self.cam_panel = ImagePanel("Behavior camera", "#17B9DC", croppable=True)
+        accents = self.accent_palette()
+        self.cam_panel = ImagePanel("Behavior camera", accents["camera"], croppable=True)
         self.cam_panel.cropChanged.connect(self.set_spatial_crop)
         self.cam_panel.exportCropRequested.connect(self.export_spatial_crop)
-        self.mini_panel = ImagePanel("Mini2P", "#12C4BE")
+        self.mini_panel = ImagePanel("Mini2P", accents["mini"])
+        self.mini_panel.header_layout.addWidget(self.theme_btn)
         split.addWidget(self.cam_panel)
         split.addWidget(self.mini_panel)
         split.setSizes([720, 720])
@@ -1363,26 +1391,25 @@ class Viewer(QMainWindow):
         tl_title = QLabel("Timeline")
         tl_title.setObjectName("mainSectionTitle")
         tl_top.addWidget(tl_title)
+        tl_top.addStretch()
         self.align_tracking_btn = QPushButton("Align tracking")
         self.align_tracking_btn.setProperty("variant", "mainGhost")
+        self.align_tracking_btn.setProperty("accentRole", "camera")
         self.align_tracking_btn.setCursor(Qt.PointingHandCursor)
         self.align_tracking_btn.clicked.connect(self.open_tracking_alignment)
         tl_top.addWidget(self.align_tracking_btn)
         self.movement_btn = QPushButton("Movement analysis")
         self.movement_btn.setProperty("variant", "mainGhost")
+        self.movement_btn.setProperty("accentRole", "mini")
         self.movement_btn.setCursor(Qt.PointingHandCursor)
         self.movement_btn.clicked.connect(self.open_movement_analysis)
         tl_top.addWidget(self.movement_btn)
         self.processing_button = QPushButton("Calcium analysis")
         self.processing_button.setProperty("variant", "mainGhost")
+        self.processing_button.setProperty("accentRole", "gap")
         self.processing_button.setCursor(Qt.PointingHandCursor)
         self.processing_button.clicked.connect(self.open_calcium_processing)
         tl_top.addWidget(self.processing_button)
-        tl_top.addStretch()
-        for txt, obj in [("Camera", "legendCyan"), ("Mini2P", "legendTeal"), ("Gap", "legendRed")]:
-            lbl = QLabel(txt)
-            lbl.setObjectName(obj)
-            tl_top.addWidget(lbl)
         timeline_lay.addLayout(tl_top)
 
         self.plot = pg.PlotWidget()
@@ -1932,28 +1959,74 @@ class Viewer(QMainWindow):
                 else:
                     self.set_time(value)
 
+    def accent_palette(self):
+        if self.day_mode:
+            return {
+                "camera": "#5C53A5", "mini": "#A059A0", "gap": "#B84C63",
+                "primary": "#5C53A5", "primary_hover": "#4E458F", "primary_text": "#FFFFFF",
+                "secondary": "#A059A0", "secondary_hover": "#894A89", "secondary_text": "#FFFFFF",
+                "tint": "#EAE5F3", "tint_text": "#51488E", "tint_border": "#C8BDDD",
+                "mini_tint": "#F1E4EE", "mini_text": "#864481",
+                "gap_tint": "#F8E3E7", "gap_text": "#A23F55",
+                "soft": "#F1ECF6", "muted": "#71677F",
+            }
+        return {
+            "camera": "#F3E79B", "mini": "#FAC484", "gap": "#EB7F86",
+            "primary": "#393448", "primary_hover": "#494158", "primary_text": "#F3E79B",
+            "secondary": "#443443", "secondary_hover": "#564050", "secondary_text": "#FAC484",
+            "tint": "#393448", "tint_text": "#F3E79B", "tint_border": "#73647E",
+            "mini_tint": "#443443", "mini_text": "#FAC484",
+            "gap_tint": "#452F3D", "gap_text": "#F8A07E",
+            "soft": "#302D40", "muted": "#D5C3D6",
+        }
+
     def set_day_mode(self, enabled):
         self.day_mode = enabled
+        palette = QPalette(self.default_palette)
+        if not enabled:
+            for role, color in (
+                (QPalette.Window, "#102131"), (QPalette.WindowText, "#EAF5FA"),
+                (QPalette.Base, "#14283A"), (QPalette.AlternateBase, "#193347"),
+                (QPalette.Text, "#EAF5FA"), (QPalette.Button, "#193347"),
+                (QPalette.ButtonText, "#EAF5FA"), (QPalette.ToolTipBase, "#14283A"),
+                (QPalette.ToolTipText, "#EAF5FA"), (QPalette.Highlight, "#393448"),
+                (QPalette.HighlightedText, "#F3E79B"), (QPalette.PlaceholderText, "#91A6B7"),
+                (QPalette.Light, "#315067"), (QPalette.Midlight, "#27485D"),
+                (QPalette.Mid, "#213B4F"), (QPalette.Dark, "#0C1927"),
+                (QPalette.Shadow, "#08111B"), (QPalette.Link, "#FAC484"),
+                (QPalette.LinkVisited, "#CE6693"), (QPalette.Accent, "#A059A0"),
+            ):
+                palette.setColor(role, QColor(color))
+            for role in (QPalette.WindowText, QPalette.Text, QPalette.ButtonText):
+                palette.setColor(QPalette.Disabled, role, QColor("#728596"))
+        QApplication.setPalette(palette)
+        logo_name = "cali_logo_horizontal.svg" if enabled else "cali_logo_horizontal_dark.svg"
+        logo_path = Path(__file__).parent / "icons" / "logo" / logo_name
+        self.brand_logo.load(str(logo_path))
+        self.setWindowIcon(QIcon(str(logo_path)))
         action = "Switch to night mode" if enabled else "Switch to day mode"
         self.theme_btn.setToolTip(action)
         self.theme_btn.setAccessibleName(action)
         self.theme_btn.setIcon(self.theme_icon())
         self.setStyleSheet(self.app_stylesheet())
+        accents = self.accent_palette()
+        self.cam_panel.accent_dot.setStyleSheet(f"color: {accents['camera']};")
+        self.mini_panel.accent_dot.setStyleSheet(f"color: {accents['mini']};")
         self.plot.setBackground("#F8F5EE" if enabled else "#0C1927")
         for axis_name in ("bottom", "left"):
             axis = self.plot.getAxis(axis_name)
             axis.setPen(pg.mkPen("#C5BEB1" if enabled else "#315067"))
             axis.setTextPen(pg.mkPen("#625E55" if enabled else "#C8D7E3"))
         self.cursor_line.setPen(pg.mkPen("#49473F" if enabled else "#F0F7FC", width=1.4))
-        self.cam_pts.setBrush(pg.mkBrush("#087F9E" if enabled else "#17B9DC"))
-        self.mini_pts.setBrush(pg.mkBrush("#087D78" if enabled else "#12C4BE"))
-        self.gap_pts.setPen(pg.mkPen("#B54747" if enabled else "#FF6B6B", width=1.8))
+        self.cam_pts.setBrush(pg.mkBrush(accents["camera"]))
+        self.mini_pts.setBrush(pg.mkBrush(accents["mini"]))
+        self.gap_pts.setPen(pg.mkPen(accents["gap"], width=1.8))
         self.calcium_plot.setBackground("#F8F5EE" if enabled else "#0C1927")
         for axis_name in ("bottom", "left"):
             axis = self.calcium_plot.getAxis(axis_name)
             axis.setPen(pg.mkPen("#C5BEB1" if enabled else "#315067"))
             axis.setTextPen(pg.mkPen("#625E55" if enabled else "#C8D7E3"))
-        self.calcium_curve.setPen(pg.mkPen("#087D78" if enabled else "#12C4BE", width=1.5))
+        self.calcium_curve.setPen(pg.mkPen(accents["mini"], width=1.5))
         self.calcium_cursor.setPen(pg.mkPen("#49473F" if enabled else "#F0F7FC", width=1.4))
         self.theme_changed.emit(enabled)
 
@@ -1963,7 +2036,7 @@ class Viewer(QMainWindow):
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
-        pen = QPen(QColor("#454D46" if self.day_mode else "#365064"), 1.7)
+        pen = QPen(QColor("#454D46" if self.day_mode else "#F3E79B"), 1.7)
         pen.setCapStyle(Qt.RoundCap)
         pen.setJoinStyle(Qt.RoundJoin)
         painter.setPen(pen)
@@ -2084,25 +2157,6 @@ class Viewer(QMainWindow):
             color: #728596;
             border: 1px solid #11293B;
             border-radius: 14px;
-        }
-
-        QLabel#legendCyan, QLabel#legendTeal, QLabel#legendRed {
-            padding: 5px 9px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 650;
-        }
-        QLabel#legendCyan {
-            background: #E5F8FC;
-            color: #087F9E;
-        }
-        QLabel#legendTeal {
-            background: #E5F9F6;
-            color: #087D78;
-        }
-        QLabel#legendRed {
-            background: #FFE9E8;
-            color: #B54747;
         }
 
         QFrame#trimSeparator {
@@ -2428,6 +2482,86 @@ class Viewer(QMainWindow):
                 height: 5px;
             }}
         """
+        if not self.day_mode:
+            stylesheet += """
+                QMainWindow, QDialog, QWidget#root { background: #0C1927; color: #EAF5FA; }
+                QFrame#viewerCard, QFrame#timelineCard { background: #14283A; border-color: #315067; }
+                QLabel#mainSectionTitle, QLabel#panelTitle, QLabel#trimTitle { color: #EAF5FA; }
+                QLabel#calciumStatus, QCheckBox { color: #B7C7D4; }
+                QFrame#trimSeparator { background: #315067; }
+                QPushButton, QPushButton[variant="mainGhost"], QPushButton[variant="viewerTool"] {
+                    background: #193347; color: #EAF5FA; border-color: #315067;
+                }
+                QTabWidget QComboBox, QTabWidget QSpinBox {
+                    background: #193347; color: #EAF5FA; border-color: #315067;
+                }
+                QCheckBox::indicator:unchecked { background: #14283A; border-color: #728596; }
+                QSlider::groove:horizontal { background: #213B4F; }
+            """
+        accents = self.accent_palette()
+        stylesheet += f"""
+            QWidget {{ selection-background-color: {accents['tint']}; selection-color: {accents['tint_text']}; }}
+            QLabel#navSubhead {{ color: {accents['mini_text']}; }}
+            QLabel#trimStatusPill {{
+                background: {accents['tint']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
+            }}
+            QPushButton[variant="blue"], QPushButton[variant="viewerToolAccent"] {{
+                background: {accents['primary']}; color: {accents['primary_text']}; border-color: {accents['primary']};
+            }}
+            QPushButton[variant="blue"]:hover, QPushButton[variant="viewerToolAccent"]:hover {{
+                background: {accents['primary_hover']}; border-color: {accents['primary_hover']};
+            }}
+            QPushButton[variant="teal"] {{
+                background: {accents['secondary']}; color: {accents['secondary_text']}; border-color: {accents['secondary']};
+            }}
+            QPushButton[variant="teal"]:hover {{
+                background: {accents['secondary_hover']}; border-color: {accents['secondary_hover']};
+            }}
+            QPushButton:hover, QPushButton[variant="source"]:hover,
+            QPushButton[variant="soft"]:hover, QPushButton[variant="navStep"]:hover,
+            QPushButton[variant="mainGhost"]:hover, QPushButton[variant="viewerTool"]:hover {{
+                background: {accents['soft']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
+            }}
+            QPushButton[variant="soft"]:checked, QPushButton[variant="viewerTool"]:checked {{
+                background: {accents['tint']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
+            }}
+            QPushButton:pressed {{ background: {accents['tint']}; color: {accents['tint_text']}; }}
+            QPushButton:disabled, QPushButton[variant="blue"]:disabled,
+            QPushButton[variant="teal"]:disabled, QPushButton[variant="viewerToolAccent"]:disabled {{
+                background: {"#EEEAE1" if self.day_mode else "#14283A"};
+                color: {"#96968B" if self.day_mode else "#728596"};
+                border-color: {"#DFDACE" if self.day_mode else "#27485D"};
+            }}
+            QComboBox:focus, QSpinBox:focus, QTabWidget QComboBox:focus, QTabWidget QSpinBox:focus {{
+                border-color: {accents['secondary']};
+            }}
+            QComboBox QAbstractItemView {{
+                selection-background-color: {accents['tint']}; selection-color: {accents['tint_text']};
+            }}
+            QTabBar::tab {{ background: {accents['soft']}; color: {accents['muted']}; }}
+            QTabBar::tab:selected {{ background: {accents['tint']}; color: {accents['tint_text']}; }}
+            QCheckBox::indicator:checked {{ background: {accents['secondary']}; border-color: {accents['secondary']}; }}
+            QSlider::sub-page:horizontal {{ background: {accents['primary']}; }}
+            QSlider::handle:horizontal {{ background: {accents['primary']}; border-color: {accents['primary_hover']}; }}
+        """
+        for role, background, text in (
+            ("camera", accents["tint"], accents["tint_text"]),
+            ("mini", accents["mini_tint"], accents["mini_text"]),
+            ("gap", accents["gap_tint"], accents["gap_text"]),
+        ):
+            stylesheet += f"""
+                QPushButton[accentRole="{role}"] {{
+                    background: {background}; color: {text}; border-color: {background};
+                }}
+                QPushButton[accentRole="{role}"]:hover,
+                QPushButton[accentRole="{role}"]:pressed {{
+                    background: {background}; color: {text}; border-color: {text};
+                }}
+                QPushButton[accentRole="{role}"]:disabled {{
+                    background: {background}; color: {"#96968B" if self.day_mode else "#728596"};
+                    border-color: {background};
+                }}
+            """
         return stylesheet
 
     def choose(self, title, filt):

@@ -131,8 +131,8 @@ sin comprobar las condiciones de la fuente.
 Desde el directorio del proyecto:
 
 ```bash
-conda activate mini2p-sync
-python sync_viewer.py
+conda activate cali
+python cali.py
 ```
 
 ## 2. Probar corrección de movimiento y CNMF (solo necesita el TIFF)

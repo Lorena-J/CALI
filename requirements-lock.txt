@@ -1,0 +1,12 @@
+# Python 3.11 viewer runtime. Local target: macOS Apple Silicon.
+# Version pins only; no system-library, platform or CaImAn lock is implied.
+-r requirements.txt
+
+# Runtime dependencies resolved alongside the direct dependencies above.
+colorama==0.4.6
+packaging==26.3
+PySide6_Addons==6.11.2
+PySide6_Essentials==6.11.2
+python-dateutil==2.9.0.post0
+shiboken6==6.11.2
+six==1.17.0

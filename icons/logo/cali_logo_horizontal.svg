@@ -1,14 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 518.7 140.0" width="519" height="140" role="img">
 <title>CALI logo</title>
-<defs><clipPath id="sun"><circle cx="0" cy="0" r="72"/></clipPath></defs>
 <g transform="translate(129,91) scale(1)">
-  <g clip-path="url(#sun)">
-    <rect x="-80" y="-80" width="160" height="11" fill="#f3e79b"/>
-    <rect x="-80" y="-70" width="160" height="9" fill="#fac484"/>
-    <rect x="-80" y="-62" width="160" height="11" fill="#f8a07e"/>
-    <rect x="-80" y="-52" width="160" height="13" fill="#eb7f86"/>
-    <rect x="-80" y="-40" width="160" height="17" fill="#ce6693"/>
-    <rect x="-80" y="-24" width="160" height="24" fill="#a059a0"/>
+  <g>
+    <path d="M-0.00000000 -72 H0.00000000 A72 72 0 0 1 20.56696380 -69 H-20.56696380 A72 72 0 0 1 -0.00000000 -72 Z" fill="#f3e79b"/>
+    <path d="M-16.85229955 -70 H16.85229955 A72 72 0 0 1 38.24918300 -61 H-38.24918300 A72 72 0 0 1 -16.85229955 -70 Z" fill="#fac484"/>
+    <path d="M-36.60601044 -62 H36.60601044 A72 72 0 0 1 50.82322304 -51 H-50.82322304 A72 72 0 0 1 -36.60601044 -62 Z" fill="#f8a07e"/>
+    <path d="M-49.79959839 -52 H49.79959839 A72 72 0 0 1 60.52272301 -39 H-60.52272301 A72 72 0 0 1 -49.79959839 -52 Z" fill="#eb7f86"/>
+    <path d="M-59.86651819 -40 H59.86651819 A72 72 0 0 1 68.22756041 -23 H-68.22756041 A72 72 0 0 1 -59.86651819 -40 Z" fill="#ce6693"/>
+    <path d="M-67.88225099 -24 H67.88225099 A72 72 0 0 1 72.00000000 0 H-72.00000000 A72 72 0 0 1 -67.88225099 -24 Z" fill="#a059a0"/>
   </g>
   <path d="M-110 0 H-30 C-20 0 -18 -52 -7 -52 C6 -52 16 -5 52 -2 H110" fill="none" stroke="#5c53a5" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
 </g>

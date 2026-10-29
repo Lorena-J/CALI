@@ -11,7 +11,7 @@ import pandas as pd
 import cv2
 from PySide6.QtWidgets import QApplication
 
-from sync_viewer import Viewer, TrackingAlignmentDialog
+from cali import Viewer, TrackingAlignmentDialog
 
 
 class TrackingAlignmentTests(unittest.TestCase):
@@ -136,7 +136,7 @@ class TrackingAlignmentTests(unittest.TestCase):
     def test_invalid_alignment_does_not_leave_stale_export(self):
         self.d._align_tracking()
         self.set_tracking(np.arange(3.))
-        with patch("sync_viewer.QMessageBox.warning") as warning:
+        with patch("cali.QMessageBox.warning") as warning:
             self.d.align_tracking()
         warning.assert_called_once()
         self.assertIsNone(self.d.result_df)
@@ -155,10 +155,10 @@ class TrackingAlignmentTests(unittest.TestCase):
             self.d._align_tracking()
             expected = self.d.result_df.copy()
             # A change during progress must not corrupt the in-progress export.
-            with patch("sync_viewer.QFileDialog.getSaveFileName", return_value=(str(target), "")), \
-                 patch("sync_viewer.QMessageBox.information"), \
-                 patch("sync_viewer.QMessageBox.critical") as error, \
-                 patch("sync_viewer.QApplication.processEvents", side_effect=self.d.invalidate_alignment):
+            with patch("cali.QFileDialog.getSaveFileName", return_value=(str(target), "")), \
+                 patch("cali.QMessageBox.information"), \
+                 patch("cali.QMessageBox.critical") as error, \
+                 patch("cali.QApplication.processEvents", side_effect=self.d.invalidate_alignment):
                 self.d.export_video()
             error.assert_not_called()
             exported = pd.read_csv(target.with_suffix(".mapping.csv"))

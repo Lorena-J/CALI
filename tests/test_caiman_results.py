@@ -12,7 +12,7 @@ import pandas as pd
 from PySide6.QtWidgets import QApplication
 
 from caiman_results import CaImAnResults
-from sync_viewer import Viewer
+from cali import Viewer
 
 
 def write_cnmf_fixture(path, sparse=True, quality=True):
@@ -214,7 +214,7 @@ class CalciumViewerTests(unittest.TestCase):
         self.assertEqual(table.caiman_sample_zero_based.iloc[1], 0)
         self.assertIn("Frame counts differ", self.v.calcium_status.text())
         output = Path(self.folder.name) / "trace.csv"
-        with patch("sync_viewer.QFileDialog.getSaveFileName", return_value=(str(output), "")):
+        with patch("cali.QFileDialog.getSaveFileName", return_value=(str(output), "")):
             self.v.export_calcium_trace()
         pd.testing.assert_frame_equal(pd.read_csv(output), table, check_dtype=False)
 

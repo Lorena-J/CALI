@@ -1,243 +1,154 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="icons/logo/cali_logo_horizontal_dark.svg">
+  <img alt="CALI — Calcium Linked Behavior explorer" src="icons/logo/cali_logo_horizontal.svg" width="420">
+</picture>
+
 # CALI
 
-**CA**lcium **LI**nked Behavior explorer: a desktop viewer for aligning Mini2P
-imaging and behavior-camera TTL streams.
+**CA**lcium **LI**nked Behavior explorer is a local Python desktop application for
+inspecting Mini2P imaging and behavior video on a shared TTL timeline. It can
+align existing tracking data, run CaImAn motion correction and CNMF, and explore
+associations between calcium activity and movement.
 
-Formerly called MINISYNC.
+CALI was previously called MINISYNC. Its current acquisition focus is Mini2P;
+it does not generate behavioral tracking.
 
-Run:
+![CALI in day mode, before loading data](docs/images/cali-day.png)
+
+<details>
+<summary>Night mode</summary>
+
+![CALI in night mode, before loading data](docs/images/cali-night.png)
+
+</details>
+
+## Install and launch
+
+Use **Python 3.11**. Local validation is on macOS Apple Silicon; other platforms
+have not yet been validated. The viewer and its tests do not require CaImAn.
+
+Clone the repository into a folder named `CALI` (the GitHub repository URL still
+uses the original name):
 
 ```bash
-pip install -r requirements.txt
-python sync_viewer.py
+git clone https://github.com/Lorena-J/mini2p-sync-viewer.git CALI
+cd CALI
+conda env create -f environment.yml
+conda activate cali
+python cali.py
 ```
 
-The bundled `mini2p_logo_mark.png` is used by the application header and window icon.
+If you already have this folder and the `cali` environment, activate it and run
+`python cali.py`; do not recreate your environment just to launch the application.
 
-## Motion correction and CNMF
+Alternatively, with Python 3.11 installed, use a fresh virtual environment:
 
-Choose **Calcium analysis** beside Align tracking and Movement analysis in the Timeline to process TIFFs with
-CaImAn in a separate process. The viewer remains usable during computation.
-CaImAn is optional for viewing existing results; processing requires its own
-installation. Create an environment with:
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-lock.txt
+python cali.py
+```
+
+`requirements.txt` pins the viewer's direct dependencies. `requirements-lock.txt`
+also pins their runtime dependencies for the tested Python 3.11 stack. These
+files do not lock system libraries or guarantee identical builds across platforms.
+The Conda recipe installs that same viewer stack through pip.
+
+To **process** TIFFs, install the separate optional CaImAn environment:
 
 ```bash
 conda env create -f environment-caiman.yml
 ```
 
-The environment pins CaImAn 1.12.1 and constrains `setuptools<81` and
-`scipy<1.17`: newer versions respectively remove `pkg_resources` or change
-Toeplitz matrix handling used by this CaImAn release's deconvolution.
+Return to `conda activate cali` to run the GUI. It detects the sibling
+`cali-caiman` environment automatically. Reading saved CaImAn HDF5 results needs
+only the viewer. See [processing setup and workflow](docs/calcium-processing.md)
+for custom engine locations and compatibility constraints.
 
-The viewer and worker use separate Python environments when needed. The engine
-is located automatically in the current environment or a sibling Conda environment
-named `caiman` or `cali-caiman` (the older `minisync-caiman` name is still
-detected); interpreter paths are not exposed in the UI. For custom installations,
-set the `CALI_CAIMAN_PYTHON` environment variable (`MINISYNC_CAIMAN_PYTHON` is
-still accepted).
-For the current development
-machine, launch the viewer with `conda activate mini2p-sync`; its existing
-`caiman` environment already contains the processing engine.
-See the [CaImAn installation guide](https://caiman.readthedocs.io/en/latest/Installation.html)
-for platform requirements, including Intel/Rosetta environments on Apple Silicon.
+## What to load
 
-1. Load your TIFF in Files, then open **Calcium analysis** in the Timeline.
-   The loaded TIFF is reused. **Add TIFF** adds source files in selection order;
-   the trash icon clears the analysis selection without deleting any files.
-2. Check **Frame rate (Hz)**. It is prefilled from ScanImage metadata, or estimated
-   from the loaded Mini2P TTL intervals, and stays editable. Without either source,
-   enter it yourself. This is acquisition frame rate, not neuronal firing rate.
-3. Choose **Channels** and **Planes**. Saved-channel metadata is used when available.
-   For two channels, choose Channel 1, Channel 2 or **Both channels**. Both runs
-   separate jobs sequentially; signals and footprints are not merged. Each channel
-   is corrected independently, without transferring reference-channel shifts.
-   Only one plane is currently supported; unsupported plane counts are disabled.
-4. **More options** reveals motion correction, shifts, patch settings, first Mini2P
-   frame, neuron size, decay time and quality thresholds. These are starting
-   parameters, not validated Mini2P presets. At least 100 selected-channel samples
-   are required; multiplane/flyback, RGB and incomplete channel cycles are rejected.
-5. Choose **Run analysis**. A new `cali_results/calcium_*` folder is created
-   beside the source TIFF (runs made before the rename are in `minisync_results/`).
-   Originals and previous runs are preserved. For both
-   channels, outputs are stored in separate `channel_*` subfolders with `batch.json`.
-6. Completed results open automatically in the main viewer, using the corrected
-   TIFF and configured frame origin. The setup window closes and **Calcium** is
-   selected. Choose ROI and signal (`C`, `C + YrA`, ΔF/F or `S`) there; **Play**,
-   the movie-frame field and slider navigate the corrected movie. The channel
-   selector in the main Calcium tab switches between completed channel results.
-   Detailed logs are saved to disk rather than displayed in a panel.
+Use the **Files** buttons to select local files:
 
-If no components passed the configured quality criteria, the initial filter
-falls back to **All components** so the candidates remain inspectable. Their
-saved accepted/rejected labels are preserved; visibility does not validate a cell.
-To reopen an existing run, use **CaImAn HDF5** in Files and select its
-`cnmf_results.hdf5` or `processing.json` (or `batch.json` for both channels).
-When the accompanying manifest exists, the corrected TIFF is loaded as well.
+| Input | Purpose | Required format |
+| --- | --- | --- |
+| Camera CSV | Behavior-camera timing | CSV with `frame` and `timestamp_ms` |
+| Mini2P CSV | Imaging timing | CSV with `frame` and `timestamp_ms` |
+| Behavior MP4 | Behavior images | Video corresponding to the camera TTLs |
+| ScanImage TIFF | Imaging images and/or CaImAn processing | TIFF; processing currently supports one plane |
+| CaImAn HDF5 | Existing calcium traces and footprints | `.h5`/`.hdf5` from `cnm.save(...)`; completed CALI runs can also open through their manifest |
+| Tracking CSV | Align tracking or analyze movement | Flat CSV or DeepLabCut multi-header CSV, referenced to the original behavior video |
 
-No behavior video or tracking is needed to calculate CNMF. Both TTL CSVs and the
-behavior video are used by the existing synchronized viewer. The TTL frame
-convention must match one time sample per selected channel; the worker does not
-resolve unknown TTL/page/volume relationships.
+The full synchronized image view uses both TTL CSVs, behavior video and its
+corresponding imaging TIFF. **Calcium analysis** can process TIFFs without TTLs,
+video or tracking. Reading calcium results can also work without TTLs, using
+movie-frame coordinates.
 
-Processed results display the full trace against **Movie frame**, including
-samples outside TTL coverage. Only samples with a measured Mini2P TTL have a
-synchronized behavior time; other movie frames leave the behavior viewer empty.
-No acquisition times are invented. The Timing tab keeps its independent Arduino
-time axis. Preview playback uses the configured frame rate, capped at 60 fps.
-The frame-rate input accepts 0.001–1000 Hz to catch unit/typing mistakes.
+## First synchronized view
 
-Processing follows the [official two-photon CaImAn pipeline](https://github.com/flatironinstitute/CaImAn/blob/main/demos/general/demo_pipeline.py):
-rigid or piecewise-rigid motion correction, patch CNMF initialization, full
-refinement with AR(1) deconvolution, component quality evaluation (SNR/spatial
-correlation, CNN disabled), and saved ΔF/F. Quality labels identify candidate
-components; inspect motion and cells before interpreting biological results.
-The worker uses one CaImAn process and limits native threads to one.
+1. Load **Camera CSV**, **Mini2P CSV**, **Behavior MP4** and **ScanImage TIFF**.
+   Both TTL files must use the same acquisition clock in milliseconds.
+2. Inspect the **Timing** tab. Click the timeline or move its cursor to browse
+   the nearest camera and imaging frames. Left/right arrows step imaging frames;
+   PageUp/PageDown move between detected camera gaps.
+3. Check **Video mapping** and **MP4 offset** against your acquisition. Offset
+   is in video frames, not milliseconds; it defaults to zero. Missing camera TTLs
+   are reconstructed on load, so verify the mapping against real video frames.
+4. Use **Align tracking** to align one numeric tracking coordinate to camera or
+   Mini2P times. Use **Calcium analysis** to process TIFFs, or load existing results
+   through **CaImAn HDF5**. **Movement analysis** requires both TTLs, calcium results
+   and tracking from the original behavior video.
+5. Use the theme button in the Mini2P header to switch between day and night mode.
 
-Outputs include `cnmf_results.hdf5`, `selected_channel.tif`,
-`motion_corrected.tif`, `motion_shifts.npz`, `frame_mapping.csv`,
-`processing.json` (settings, source layout and SHA-256, versions, status and output paths),
-`caiman_parameters.json` (resolved CNMF parameters)
-and intermediate CaImAn memory maps. The GUI also saves `processing.log`.
-The mapping records each sample's source TIFF and page, selected channel and
-user-supplied Mini2P frame ID. No temporal resampling is applied. Correction
-can add a constant intensity offset for non-negativity; copied borders are
-excluded from CNMF using the maximum observed displacement. Allow disk space
-for multiple float32 copies of the selected movie and intermediate maps.
+Raw TIFF browsing currently maps Mini2P frame ID 1 to TIFF page 0. Do not assume
+that this matches an interleaved multichannel or multiplane acquisition. Channel
+selection and source-page provenance belong to the processing workflow.
 
-While running, the bottom button becomes **Cancel analysis**, which terminates
-the active worker and stops any remaining channel jobs.
-Partial files are retained, with cancelled status when a manifest exists.
-On failure, inspect the log and manifest; rerun in a new output folder. Cancel
-an active job before closing the application.
+For CSV examples, index conventions, reconstruction limits and export behavior,
+see [synchronization and tracking](docs/synchronization.md).
 
-For scripted runs, save a JSON object with the fields of
-`calcium_pipeline.PipelineSettings` and run the worker directly:
+## Guides
+
+- [Synchronization, tracking, crops and trims](docs/synchronization.md)
+- [Motion correction and CNMF processing](docs/calcium-processing.md)
+- [Inspecting and exporting calcium results](docs/calcium-results.md)
+- [Movement and calcium activity](docs/movement-analysis.md)
+- [Validation record and remaining coverage](docs/processing-validation.md)
+- [Development and automated checks](docs/development.md)
+
+## Validation and limitations
+
+The automated suite uses synthetic fixtures for timing, tracking, HDF5 results,
+processing orchestration and exports. Real CaImAn processing has been tested on
+its official example movie. Demo behavior, TTLs and tracking are simulated and
+have no biological association with that movie.
+
+Synchronization with real acquisition clocks and processing an authentic
+multichannel ScanImage acquisition remain to be validated. Multiplane/flyback
+processing is unsupported. Automatic component acceptance is not confirmation
+of a neuronal identity; deconvolved `S` is not a measured spike train. Movement
+statistics are descriptive and exploratory.
+
+CALI keeps session state in memory; session save/restore is not implemented.
+Original inputs are preserved. Processing can require several float32 copies
+of a movie, and failed or cancelled runs retain partial outputs.
+
+## Tests
+
+Activate the viewer environment, then run from the repository root:
 
 ```bash
-/path/to/caiman/python calcium_pipeline.py --config /path/to/settings.json
+python -m pip check
+QT_QPA_PLATFORM=offscreen python -m unittest discover -s tests -v
 ```
 
-The configured output directory must not exist. No example data or TTLs are
-silently substituted. ScanImage multichannel metadata handling has synthetic
-tests; validation on an authentic multichannel ScanImage acquisition remains
-pending.
+The proposed GitHub Actions workflow runs these checks on macOS with Python
+3.11 after pushes and pull requests. Its presence does not mean a remote run has
+already passed; see the repository's Actions tab after publication.
 
-## CaImAn CNMF results
+## License and third-party material
 
-Load **CaImAn HDF5** to open a `.hdf5` or `.h5` result saved with
-`cnm.save(...)`. CALI reads the file directly with `h5py`; installing or
-running the CaImAn analysis pipeline is not required. NWB and pickle results
-are not supported by this importer.
-
-In the **Calcium** tab:
-
-- Select an original, zero-based component ID and filter by the quality labels
-  saved by CaImAn. Files without quality evaluation show all components.
-- Choose `C` (denoised temporal component), `C + YrA` (including residuals),
-  `F_dff` (ΔF/F), or `S` (deconvolved activity), when present in the file.
-  CALI displays saved results without recalculating normalization or
-  deconvolution; `C` is not labelled as raw fluorescence, and `S` is not a
-  measured spike train.
-- Traces can be inspected without TTLs using movie frames. Load the Mini2P TTL CSV to synchronize traces with both image viewers.
-  Drag either plot's cursor, click a plot, or use the existing frame controls.
-  Horizontal plot ranges follow each other in the synchronized-time view;
-  the processed movie-frame view has its own axis.
-- **First Mini2P frame** identifies the 1-based Mini2P frame corresponding to
-  CaImAn sample zero. Leave it at 1 for a full movie. For a temporally cropped
-  movie, enter its actual starting frame. Mapping uses frame IDs and measured
-  TTL times, without estimating a frame rate or interpolating calcium values.
-  Missing/out-of-range samples remain empty, and count differences are shown.
-  Temporally downsampled, reordered, or concatenated movies need an explicit
-  frame mapping and are not supported by the single starting-frame setting.
-- **Show ROI** outlines the selected spatial footprint at 20% of its maximum.
-  Footprints use CaImAn's Fortran pixel ordering. Overlay requires matching
-  image dimensions and coordinates: use the same field of view and motion
-  corrected movie used for CNMF. A matching size alone does not establish
-  spatial registration. Without a TIFF frame, a saved correlation image `Cn`
-  or the selected footprint is displayed and labelled as a static reference.
-- **Export trace** saves the selected signal with Mini2P frame IDs, measured
-  relative times in milliseconds, zero-based CaImAn sample/component IDs,
-  and empty values outside coverage. Processed movie results export all samples
-  with empty `time_ms` where a measured TTL is absent; no-TTL imports also leave
-  times empty. The current temporal trim applies to exports.
-
-The importer supports 2D dense or CSC spatial footprints, and trace-only
-viewing if spatial footprints or 2D dimensions are unavailable. It loads
-selected trace rows and footprint columns instead of loading all components.
-
-Format references: [CaImAn CNMF persistence](https://caiman.readthedocs.io/en/latest/core_functions.html),
-[Estimates fields](https://github.com/flatironinstitute/CaImAn/blob/main/caiman/source_extraction/cnmf/estimates.py),
-and [HDF5 serialization](https://github.com/flatironinstitute/CaImAn/blob/main/caiman/utils/utils.py).
-
-Validation includes synthetic CNMF-layout fixtures and a full CaImAn 1.12.1
-CNMF fit of the official `demoMovie.tif` (2,000 frames, 15 components), with
-trace, tracking, crop, trim and aligned-video exports checked in CALI.
-The demo's timestamps, behavior and tracking are explicitly simulated;
-synchronization with real acquisition clocks remains to be validated.
-
-To regenerate the demonstration with a working CaImAn installation:
-
-```bash
-python scripts/create_caiman_demo.py --source /path/to/demoMovie.tif --output /path/to/new_demo_folder
-```
-
-The output directory must not already exist. The package contains a Spanish
-loading guide, provenance, SHA-256 checksums, and optional missing-data cases.
-
-## Calcium and movement analysis
-
-After loading both TTL CSVs and CaImAn results, open **Movement analysis** in
-the timeline header, then load the tracking CSV associated with the behavior
-video. The video is optional if tracking has explicit frame indices; the camera
-TTLs establish the time mapping. A tracking file already open in **Align
-tracking** is reused automatically when the analysis window is first opened.
-
-Use **Position X/Y** to calculate speed from two coordinates of the same body
-part, or **Speed column** to use an existing non-negative speed measurement.
-Flat CSV and DeepLabCut multi-header CSV are supported, with the same frame ID
-conventions as tracking alignment (`frame_index`: zero-based; `frame`: one-based).
-The input must refer to the loaded behavior video, not an already resampled
-Mini2P tracking export. X/Y are differentiated using measured time in seconds.
-Speed is median filtered within the configurable temporal window; setting the
-window to zero disables smoothing. Input units identify the units already in
-the file; selecting cm or mm does **not** calibrate or rescale pixel data.
-
-Choose a confidence/likelihood column when available, its minimum value,
-the maximum permitted inter-frame time, the movement threshold, signal and
-component filter. Samples at or above the speed threshold are moving; lower
-speeds are rest. Missing coordinates, rejected confidence, skipped tracking
-frames and excessive time gaps split the tracking into independent runs.
-Speed is interpolated to Mini2P times only inside these runs. Missing coverage
-is unknown, not rest. The current temporal trim and CaImAn first-frame mapping
-apply to the analysis.
-
-**Analyze** produces one row per cell with mean activity during movement and
-rest, their difference, Pearson correlation with speed, paired frame counts
-and observed duration in each state. Means are duration weighted using half
-of each adjacent covered interval at each endpoint. Gaps and acquisition time
-beyond the observed endpoints are excluded. Cells without both states have
-an undefined difference; correlations for constant signals or fewer than
-three paired samples are undefined. These values are descriptive, with no
-p-values, independence assumptions or significance classifications.
-
-Select a row to inspect synchronized time plots, activity versus speed,
-state means and lagged correlation. The selection also focuses that ROI in
-the main viewer. Time plots use seconds; clicking them updates both image
-viewers. A positive lag compares `calcium(t)` to `speed(t − lag)`, meaning
-calcium follows movement. Lagged correlations use available paired samples
-at each lag and are exploratory, not corrected statistical tests. Their
-sample coverage can differ between lags.
-
-**Export analysis** creates a new folder with `per_cell_summary.csv`,
-`aligned_movement.csv`, selected-ROI aligned samples and lag curve, and an
-`analysis_settings.json` recording sources, mapping, thresholds, units and
-processing choices. Changes to input settings, TTLs, video mapping, trim or
-CaImAn source invalidate the result and disable export until recalculation.
-
-For the prepared demo, use `06_tracking_SIMULATED.csv`, X=`x`, Y=`y`, units=px,
-confidence=`likelihood`, threshold=20 px/s, median window=0.2 s and maximum gap
-100 ms. The behavioral trajectory is simulated independently of the calcium;
-any associations in that demo have no biological interpretation.
-
-Method references: [NumPy gradients on uneven time spacing](https://numpy.org/doc/stable/reference/generated/numpy.gradient.html)
-and [Pearson correlation definition and constant-input limits](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.pearsonr.html).
+A project license has not yet been selected. Licensing of the code and CALI's
+logos is pending an explicit decision. Dependencies and external example data
+have their own terms; no experimental recordings or example movies are bundled
+in this repository.

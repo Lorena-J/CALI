@@ -1,2 +1,17 @@
-# Regenerable local demonstration data and processing outputs.
+# Python-generated files and local environments.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# macOS metadata.
+.DS_Store
+
+# Local demonstration data and processing outputs.
 /datos_prueba_minisync/
+/datos_prueba_cali/
+/cali_results/
+/minisync_results/

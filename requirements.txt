@@ -1,7 +1,9 @@
-PySide6
-pyqtgraph
-opencv-python
-tifffile
-pandas
-numpy
-h5py
+# Viewer dependencies, validated with Python 3.11.
+# Use requirements-lock.txt to install the pinned full runtime stack.
+PySide6==6.11.2
+pyqtgraph==0.14.0
+opencv-python==5.0.0.93
+tifffile==2026.3.3
+pandas==3.0.6
+numpy==2.4.6
+h5py==3.16.0

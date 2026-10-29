@@ -56,6 +56,7 @@ class CalciumProcessingDialog(QDialog):
         inputs.setSpacing(14)
         files = QHBoxLayout()
         self.add_button = QPushButton("Add TIFF")
+        self.add_button.setObjectName("analysisAdd")
         self.add_button.clicked.connect(self.add_sources)
         self.remove_button = QToolButton()
         self.remove_button.setIcon(QIcon(str(Path(__file__).with_name("icons") / "trash.svg")))
@@ -64,6 +65,7 @@ class CalciumProcessingDialog(QDialog):
         self.remove_button.setAccessibleName("Remove TIFFs")
         self.remove_button.clicked.connect(self.remove_sources)
         self.file_name = QLabel("No TIFF selected")
+        self.file_name.setObjectName("analysisFileName")
         self.file_name.setMinimumWidth(0)
         files.addWidget(self.add_button)
         files.addWidget(self.remove_button)
@@ -100,13 +102,15 @@ class CalciumProcessingDialog(QDialog):
         basic.addRow("Planes", self.planes)
         inputs.addLayout(basic)
         self.more_button = QPushButton("More options")
+        self.more_button.setObjectName("analysisMore")
         self.more_button.setCheckable(True)
         self.more_button.toggled.connect(self.toggle_options)
         inputs.addWidget(self.more_button, alignment=Qt.AlignLeft)
         self.advanced = QWidget()
         self.advanced.setObjectName("analysisAdvanced")
         advanced = QFormLayout(self.advanced)
-        advanced.setContentsMargins(0, 0, 0, 0)
+        advanced.setContentsMargins(12, 12, 12, 12)
+        advanced.setVerticalSpacing(10)
         self.motion_mode = QComboBox()
         self.motion_mode.addItems(["Rigid", "Piecewise rigid"])
         self.max_shift = self.integer(1, 200, 6)
@@ -147,6 +151,7 @@ class CalciumProcessingDialog(QDialog):
         self.result_row.hide()
         layout.addWidget(self.result_row)
         self.status = QLabel()
+        self.status.setObjectName("analysisStatus")
         self.status.setWordWrap(True)
         self.status.hide()
         layout.addWidget(self.status)
@@ -162,29 +167,86 @@ class CalciumProcessingDialog(QDialog):
         self.sync_source_from_viewer()
 
     def apply_theme(self, day):
-        background, field, text, border = (("#F2EEE4", "#F8F5EE", "#454D46", "#D1CCBE") if day
-                                          else ("#102332", "#183146", "#EEF7FB", "#2C4C62"))
+        accents = self.viewer.accent_palette()
+        if day:
+            background, card, field = "#F2EEE5", "#FAF7F0", "#F8F5EE"
+            text, muted, border, disabled = "#454D46", "#737469", "#D2CCBF", "#96968B"
+        else:
+            background, card, field = "#102131", "#14283A", "#193347"
+            text, muted, border, disabled = "#EAF5FA", "#91A6B7", "#315067", "#728596"
+        run_text = "#5C53A5" if day else "#D6C9F0"
         icons = Path(__file__).with_name("icons").as_posix()
         self.setStyleSheet(f'''
-            QDialog#calciumAnalysisDialog, QWidget#analysisAdvanced {{ background: {background}; }}
-            QLabel {{ color: {text}; }}
-            QPushButton {{ background: {field}; color: {text}; border: 1px solid {border}; }}
+            QDialog#calciumAnalysisDialog {{ background: {background}; color: {text}; }}
+            QWidget#analysisAdvanced {{ background: {card}; border: 1px solid {border}; border-radius: 14px; }}
+            QLabel {{ background: transparent; color: {text}; font-size: 12px; font-weight: 600; }}
+            QLabel#analysisFileName {{ color: {muted}; font-size: 11px; font-weight: 400; }}
+            QLabel#analysisStatus {{
+                background: {accents['gap_tint']}; color: {accents['gap_text']};
+                border-radius: 10px; padding: 9px 12px; font-weight: 400;
+            }}
+            QPushButton, QToolButton {{
+                background: {field}; color: {text}; border: 1px solid {border};
+                border-radius: 10px; font-size: 12px; font-weight: 600;
+            }}
+            QPushButton {{ min-height: 28px; padding: 5px 12px; }}
+            QToolButton {{ padding: 0; }}
+            QPushButton:hover, QToolButton:hover {{
+                background: {accents['soft']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
+            }}
+            QPushButton:pressed, QPushButton#analysisMore:checked {{
+                background: {accents['tint']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
+            }}
+            QPushButton#analysisAdd {{
+                background: {accents['tint']}; color: {accents['tint_text']}; border-color: {accents['tint']};
+            }}
+            QPushButton#analysisAdd:hover {{ border-color: {accents['tint_text']}; }}
+            QPushButton#analysisRun {{
+                background: {accents['tint']}; color: {run_text};
+                border-color: {accents['tint']}; min-height: 32px;
+            }}
+            QPushButton#analysisRun:hover, QPushButton#analysisRun:pressed {{ border-color: {run_text}; }}
+            QPushButton:disabled, QToolButton:disabled, QPushButton#analysisAdd:disabled,
+            QPushButton#analysisRun:disabled {{ background: {card}; color: {disabled}; border-color: {border}; }}
             QComboBox, QSpinBox, QDoubleSpinBox {{
                 background: {field}; color: {text}; border: 1px solid {border};
-                border-radius: 8px; min-height: 30px; max-height: 30px; padding: 0 28px 0 8px;
+                border-radius: 10px; min-height: 32px; max-height: 32px;
+                padding: 0 28px 0 10px; font-size: 12px;
+                selection-background-color: {accents['tint']}; selection-color: {accents['tint_text']};
             }}
-            QComboBox::drop-down {{ width: 26px; border: none; }}
+            QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover {{ border-color: {accents['tint_border']}; }}
+            QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {{ border-color: {accents['mini_text']}; }}
+            QComboBox:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {{
+                background: {card}; color: {disabled}; border-color: {border};
+            }}
+            QComboBox QLineEdit {{ background: transparent; color: {text}; border: none; padding: 0; }}
+            QComboBox::drop-down {{
+                subcontrol-origin: padding; subcontrol-position: top right;
+                width: 26px; border: none; border-left: 1px solid {border};
+            }}
             QComboBox::down-arrow {{ image: url("{icons}/chevron-down.svg"); width: 10px; height: 6px; }}
-            QSpinBox::up-button, QDoubleSpinBox::up-button {{ subcontrol-origin: padding; subcontrol-position: top right; width: 22px; height: 15px; border: none; }}
-            QSpinBox::down-button, QDoubleSpinBox::down-button {{ subcontrol-origin: padding; subcontrol-position: bottom right; width: 22px; height: 15px; border: none; }}
-            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{ image: url("{icons}/chevron-up.svg"); width: 10px; height: 6px; }}
-            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{ image: url("{icons}/chevron-down.svg"); width: 10px; height: 6px; }}
-            QComboBox QAbstractItemView {{ background: {field}; color: {text}; selection-background-color: #287D71; selection-color: white; }}
-            QToolButton {{ background: {field}; border: 1px solid {border}; border-radius: 8px; padding: 8px; }}
-            QToolButton:hover {{ border-color: #287D71; }}
-            QPushButton#analysisRun {{ background: #287D71; color: white; border: 1px solid #287D71; }}
-            QPushButton#analysisRun:disabled {{ background: {field}; color: #92998F; border-color: {border}; }}
+            QSpinBox::up-button, QDoubleSpinBox::up-button {{
+                subcontrol-origin: padding; subcontrol-position: top right;
+                width: 22px; height: 16px; border: none; border-left: 1px solid {border};
+            }}
+            QSpinBox::down-button, QDoubleSpinBox::down-button {{
+                subcontrol-origin: padding; subcontrol-position: bottom right;
+                width: 22px; height: 16px; border: none; border-left: 1px solid {border};
+            }}
+            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{ image: url("{icons}/chevron-up.svg"); width: 8px; height: 5px; }}
+            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{ image: url("{icons}/chevron-down.svg"); width: 8px; height: 5px; }}
+            QComboBox QAbstractItemView {{
+                background: {field}; color: {text}; border: 1px solid {border};
+                selection-background-color: {accents['tint']}; selection-color: {accents['tint_text']};
+                outline: none;
+            }}
+            QComboBox QAbstractItemView::item:disabled {{ color: {disabled}; }}
             QScrollArea {{ background: transparent; border: none; }}
+            QScrollBar:vertical {{ background: {card}; width: 10px; margin: 0; border: none; }}
+            QScrollBar::handle:vertical {{ background: {accents['tint_border']}; min-height: 24px; border-radius: 5px; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: {card}; }}
+            QToolTip {{ background: {card}; color: {text}; border: 1px solid {border}; padding: 6px; }}
         ''')
         self.layout_timer.start(0)
 

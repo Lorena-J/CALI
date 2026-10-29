@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication
 
 from calcium_pipeline import PipelineSettings, inspect_sources, inspect_tiff, prepare_movie, run_pipeline
 from processing_dialog import CalciumProcessingDialog
-from sync_viewer import Viewer
+from cali import Viewer
 from test_caiman_results import write_cnmf_fixture
 
 
@@ -220,7 +220,8 @@ class ProcessingWorkflowTests(unittest.TestCase):
         self.assertEqual(self.dialog.sources, [])
         self.assertFalse(self.dialog.run_button.isEnabled())
 
-    def test_both_channels_schedule_separate_jobs_and_do_not_merge_results(self):
+    @patch.object(CalciumProcessingDialog, "default_engine_python", return_value=sys.executable)
+    def test_both_channels_schedule_separate_jobs_and_do_not_merge_results(self, engine_python):
         path = self.root / "two_channels.tif"
         tifffile.imwrite(path, np.zeros((100, 2, 32, 40), np.uint16),
                          photometric="minisblack", metadata={"axes": "TCYX"})
@@ -230,7 +231,7 @@ class ProcessingWorkflowTests(unittest.TestCase):
         self.dialog.channel.setCurrentIndex(self.dialog.channel.findData(-1))
         with patch.object(self.dialog, "launch_job") as launch:
             self.dialog.start()
-        launch.assert_called_once()
+        launch.assert_called_once_with(sys.executable)
         self.assertEqual([job.channel_index for job in self.dialog.jobs], [0, 1])
         self.assertTrue(all(job.channels == 2 for job in self.dialog.jobs))
         one = self.complete_result("one_")

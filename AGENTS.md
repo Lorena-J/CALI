@@ -10,7 +10,26 @@ trabajo o las decisiones confirmadas por la responsable del proyecto.
 Cambio de nombre (2026-10-27): el proyecto pasa de MINISYNC a CALI, como el
 logo de `icons/logo/`. Las rutas `minisync*` antiguas que aparecen abajo y en
 `docs/` son registros históricos de validación; no renombrarlas. El entorno
-Conda de la interfaz sigue llamándose `mini2p-sync`.
+Conda de la interfaz pasó de `mini2p-sync` a `cali` el 2026-10-29, por petición
+de la responsable. La carpeta del proyecto pasa a `/Users/lorena/Developer/CALI`.
+
+Estética confirmada (2026-10-29): la cabecera usa
+`icons/logo/cali_logo_horizontal.svg` en modo claro y
+`icons/logo/cali_logo_horizontal_dark.svg` en modo oscuro. El SVG horizontal
+incluye el nombre y sustituye el icono anterior y el título adyacente.
+La columna derecha se alinea arriba con la barra lateral; el selector de tema
+se integra en la cabecera Mini2P. Los acentos de controles, leyendas e indicadores
+usan violeta/magenta de día y amarillo/melocotón de noche, derivados del logo.
+El modo oscuro debe mantener oscuros todos los fondos de interfaz, incluidos
+controles, estados deshabilitados y diálogos. Los acentos claros se usan como
+texto o indicadores sobre superficies oscuras, también en botones de acción.
+La cabecera Timeline coloca Align tracking, Movement analysis y Calcium analysis
+a la derecha, con los colores antes usados por las etiquetas Camera, Mini2P y Gap,
+respectivamente; esas tres etiquetas se han retirado.
+Calcium analysis reutiliza la paleta de acentos de Viewer en ambos temas;
+Add TIFF usa violeta/amarillo; Run analysis usa lavanda, con fondo violeta
+oscuro y texto lavanda claro de noche (preferencia confirmada).
+Controles, desplegables y opciones avanzadas conservan fondos oscuros de noche.
 
 
 CALI (CAlcium LInked Behavior explorer; antes MINISYNC) es una aplicación local de escritorio en Python para inspeccionar y
@@ -101,11 +120,20 @@ La interfaz y el README están actualmente en inglés. La conversación de esta
 revisión es en español; la lengua deseada para futuras modificaciones de la
 interfaz está pendiente de confirmar.
 
+## Mantenimiento del repositorio (2026-10-29)
+
+La responsable autoriza corregir el arranque/imports a `cali.py`, dejar de
+versionar cachés y `.DS_Store` sin eliminarlos del disco, y preparar instalación
+y documentación para usuarios nuevos. Se reorganiza el README en inglés con
+guías en `docs/` y capturas vacías de ambos temas, sin datos experimentales.
+La licencia de código y logos sigue pendiente de elección explícita. No hacer
+commits ni publicaciones. Los nombres y rutas de informes históricos se conservan.
+
 ## Mapa del código
 
 | Fichero | Responsabilidad |
 | --- | --- |
-| `sync_viewer.py` | Punto de entrada, ventana `Viewer`, carga y reconstrucción TTL, navegación, imágenes, tema visual, recortes y exportaciones; contiene también `TrackingAlignmentDialog`. |
+| `cali.py` | Punto de entrada, ventana `Viewer`, carga y reconstrucción TTL, navegación, imágenes, tema visual, recortes y exportaciones; contiene también `TrackingAlignmentDialog`. |
 | `caiman_results.py` | `CaImAnResults`: lector HDF5 sin importar CaImAn, validación de matrices, calidad de componentes, trazas, footprints y correspondencia de muestras con frames Mini2P. |
 | `calcium_pipeline.py` | Worker/CLI sin Qt: validación de TIFF, separación de canal, corrección de movimiento, CNMF, deconvolución, calidad, ΔF/F y procedencia. Importa CaImAn solo al ejecutar el cálculo. |
 | `processing_dialog.py` | `CalciumProcessingDialog`: reutiliza TIFF cargado, controles básicos/avanzados, detección interna del motor, QProcess, trabajos por canal y carga automática en el visor. |
@@ -117,19 +145,22 @@ interfaz está pendiente de confirmar.
 | `mini2p_logo_mark.png`, `icons/` | Recursos visuales locales. |
 | `README.md` | Instrucciones de arranque y descripción detallada de CaImAn y movimiento. |
 
-No hay empaquetado de aplicación, servidor, base de datos, configuración de CI
-ni archivo de bloqueo de dependencias en el árbol revisado. El estado de la
+No hay empaquetado de aplicación, servidor ni base de datos. Se añade un workflow
+local de GitHub Actions para la suite Qt en macOS/Python 3.11; no se ha ejecutado
+en GitHub todavía. `requirements-lock.txt` fija versiones de dependencias de
+interfaz, sin bloquear bibliotecas del sistema ni el entorno CaImAn. El estado de la
 sesión vive en memoria; no se ha encontrado guardado/restauración de sesiones.
 La navegación es manual mediante cursor, clics y controles de frames.
 
 ## Arranque y entorno
 
 Dependencias de `requirements.txt`: PySide6, pyqtgraph, opencv-python, tifffile,
-pandas, numpy y h5py, sin versiones fijadas.
+pandas, numpy y h5py, con versiones fijadas. `requirements-lock.txt` añade las
+dependencias transitivas y `environment.yml` crea el entorno de interfaz `cali`.
 
 ```bash
-python -m pip install -r requirements.txt
-python sync_viewer.py
+python -m pip install -r requirements-lock.txt
+python cali.py
 ```
 
 Ejecutar desde un entorno que contenga esas dependencias. No dar por supuesto
@@ -145,17 +176,17 @@ Entorno observado durante esta revisión, sin establecerlo como requisito:
   de las grabaciones o de la demostración preparada.
 
 **Entorno habitual confirmado después por la responsable y localizado:**
-`mini2p-sync` (guion, no subrayado) en la instalación Conda de Homebrew.
+`cali` (antes `mini2p-sync`) en la instalación Conda de Homebrew.
 Usar este entorno en futuras sesiones; la inspección inicial anterior solo
 cubrió otra instalación de Conda y no describe la instalación activa.
 
-- Interfaz: `/opt/homebrew/Caskroom/miniconda/base/envs/mini2p-sync/bin/python`
+- Interfaz: `/opt/homebrew/Caskroom/miniconda/base/envs/cali/bin/python`
   (Python 3.11.17 ARM64, PySide6 6.11.2, pyqtgraph 0.14.0, NumPy 2.4.6,
   tifffile 2026.3.3, pandas 3.0.6 y h5py 3.16.0).
 - Motor ya existente: `/opt/homebrew/Caskroom/miniconda/base/envs/caiman/bin/python`
   (Python 3.11.12 ARM64, CaImAn 1.12.1, SciPy 1.15.2, NumPy 1.26.4,
   setuptools 80.1.0). No se han cambiado paquetes de estos entornos existentes.
-- Arranque habitual: `conda activate mini2p-sync` y `python sync_viewer.py`.
+- Arranque habitual: `conda activate cali` y `python cali.py`.
 - El diálogo detecta el entorno hermano `caiman` como Python del motor, si
   existe; no muestra la ruta ni un selector de Python. También reconoce el
   hermano `cali-caiman` (y el antiguo `minisync-caiman`) y la variable
