@@ -43,7 +43,7 @@ class CalciumProcessingDialog(QDialog):
         self.layout_timer = QTimer(self)
         self.layout_timer.setSingleShot(True)
         self.layout_timer.timeout.connect(self.fit_dialog)
-        self.setWindowTitle("MINISYNC · Calcium analysis")
+        self.setWindowTitle("CALI · Calcium analysis")
         self.setObjectName("calciumAnalysisDialog")
         self.setMinimumWidth(480)
         self.resize(520, 250)
@@ -190,13 +190,13 @@ class CalciumProcessingDialog(QDialog):
 
     @staticmethod
     def default_engine_python():
-        override = os.environ.get("MINISYNC_CAIMAN_PYTHON")
+        override = os.environ.get("CALI_CAIMAN_PYTHON") or os.environ.get("MINISYNC_CAIMAN_PYTHON")
         if override:
             return str(Path(override).expanduser())
         if importlib.util.find_spec("caiman") is not None:
             return sys.executable
         suffix = Path("python.exe") if sys.platform == "win32" else Path("bin/python")
-        for name in ("caiman", "minisync-caiman"):
+        for name in ("caiman", "cali-caiman", "minisync-caiman"):
             candidate = Path(sys.prefix).parent / name / suffix
             if candidate.is_file():
                 return str(candidate)
@@ -335,7 +335,7 @@ class CalciumProcessingDialog(QDialog):
             inspect_sources(settings)
             selected = self.channel.currentData()
             indices = list(range(settings.channels)) if selected == -1 else [selected]
-            parent = Path(self.sources[0]).parent / "minisync_results"
+            parent = Path(self.sources[0]).parent / "cali_results"
             parent.mkdir(exist_ok=True)
             self.run_root = parent / ("calcium_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
             if len(indices) > 1:
@@ -360,7 +360,7 @@ class CalciumProcessingDialog(QDialog):
         settings = self.jobs[self.job_index]
         self.output = Path(settings.output)
         self.clear_config()
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", prefix="minisync_", delete=False) as handle:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", prefix="cali_", delete=False) as handle:
             json.dump(asdict(settings), handle)
             self.config_path = Path(handle.name)
         env = QProcessEnvironment.systemEnvironment()

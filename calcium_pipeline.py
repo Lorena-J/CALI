@@ -299,7 +299,7 @@ def main():
         os.environ[name] = "1"
     os.environ.setdefault("MPLBACKEND", "Agg")
     settings = PipelineSettings(**json.loads(args.config.read_text(encoding="utf-8")))
-    run_pipeline(settings, progress=lambda message: print(f"MINISYNC_STAGE {message}", flush=True))
+    run_pipeline(settings, progress=lambda message: print(f"CALI_STAGE {message}", flush=True))
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Contexto de MINISYNC
+# Contexto de CALI
 
 Revisión inicial: 2026-10-27. Este fichero recoge el comportamiento observado en
 el código del árbol de trabajo, incluidas funciones todavía sin seguimiento en
@@ -7,7 +7,13 @@ trabajo o las decisiones confirmadas por la responsable del proyecto.
 
 ## Propósito y alcance
 
-MINISYNC es una aplicación local de escritorio en Python para inspeccionar y
+Cambio de nombre (2026-10-27): el proyecto pasa de MINISYNC a CALI, como el
+logo de `icons/logo/`. Las rutas `minisync*` antiguas que aparecen abajo y en
+`docs/` son registros históricos de validación; no renombrarlas. El entorno
+Conda de la interfaz sigue llamándose `mini2p-sync`.
+
+
+CALI (CAlcium LInked Behavior explorer; antes MINISYNC) es una aplicación local de escritorio en Python para inspeccionar y
 alinear adquisición Mini2P y vídeo de comportamiento usando CSV de pulsos TTL.
 Permite ver imágenes, alinear una coordenada de tracking, consultar resultados
 CaImAn CNMF y describir asociaciones entre actividad de calcio y movimiento.
@@ -28,7 +34,7 @@ Orden de trabajo deseado:
 3. Definir y discutir el análisis posterior, con CaImAn como referencia inicial.
 
 Decisión confirmada: integrar CaImAn como motor de procesamiento de fondo de
-MINISYNC para corregir movimiento y extraer componentes mediante CNMF, con
+CALI para corregir movimiento y extraer componentes mediante CNMF, con
 sus resultados accesibles desde la aplicación. Usar CaImAn como biblioteca o
 proceso de cálculo; no reimplementar sus algoritmos. La primera integración
 está implementada mediante QProcess y una ventana de configuración simplificada.
@@ -152,7 +158,8 @@ cubrió otra instalación de Conda y no describe la instalación activa.
 - Arranque habitual: `conda activate mini2p-sync` y `python sync_viewer.py`.
 - El diálogo detecta el entorno hermano `caiman` como Python del motor, si
   existe; no muestra la ruta ni un selector de Python. También reconoce el
-  hermano `minisync-caiman` y la variable `MINISYNC_CAIMAN_PYTHON` para despliegue.
+  hermano `cali-caiman` (y el antiguo `minisync-caiman`) y la variable
+  `CALI_CAIMAN_PYTHON` (y la antigua `MINISYNC_CAIMAN_PYTHON`) para despliegue.
   No importar CaImAn dentro de Qt.
 
 Durante la implementación se han creado entornos **temporales de validación**:
@@ -271,7 +278,8 @@ original como `frame_index`.
   intervalos TTL Mini2P; es editable, y sin esos datos queda vacía para introducirla.
 - Procesa un canal o Both channels como trabajos secuenciales independientes.
   Admite varios TIFF con dimensiones/layout compatibles y ciclos completos.
-  Guarda automáticamente junto al TIFF en `minisync_results/calcium_*`; ambos
+  Guarda automáticamente junto al TIFF en `cali_results/calcium_*` (antes
+  `minisync_results/`); ambos
   canales generan subcarpetas y `batch.json`. Solo abre resultados al completar
   todos los trabajos; fallo/cancelación detiene la secuencia y conserva parciales.
 - Detecta canales guardados de ScanImage o eje C explícito; sin metadatos, pide

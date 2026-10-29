@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a real CNMF result plus explicitly simulated MINISYNC companion data.
+"""Build a real CNMF result plus explicitly simulated CALI companion data.
 
 Run with a working CaImAn environment. Input is the official demoMovie.tif.
 The original acquisition rate is not established here: 20 Hz is a DEMO clock.
@@ -14,9 +14,9 @@ import shutil
 import tempfile
 
 # Keep generated caches and intermediate files in temporary directories.
-for key, dirname in (("MPLCONFIGDIR", "minisync-demo-mpl"),
-                     ("NUMBA_CACHE_DIR", "minisync-demo-numba"),
-                     ("CAIMAN_TEMP", "minisync-demo-caiman-temp")):
+for key, dirname in (("MPLCONFIGDIR", "cali-demo-mpl"),
+                     ("NUMBA_CACHE_DIR", "cali-demo-numba"),
+                     ("CAIMAN_TEMP", "cali-demo-caiman-temp")):
     cache = Path(tempfile.gettempdir()) / dirname
     cache.mkdir(exist_ok=True)
     os.environ.setdefault(key, str(cache))
@@ -74,7 +74,7 @@ def create_demo(source, output):
         "quality": {"min_SNR": 2.0, "rval_thr": .75, "use_cnn": False},
     }
     mmap_path = caiman.save_memmap([str(calcium_path)],
-                                  base_name=str(Path(os.environ["CAIMAN_TEMP"]) / "minisync_demo"),
+                                  base_name=str(Path(os.environ["CAIMAN_TEMP"]) / "cali_demo"),
                                   order="C")
     mapped, dims, count = caiman.load_memmap(mmap_path)
     movie = np.reshape(mapped.T, (count, *dims), order="F")
@@ -86,7 +86,7 @@ def create_demo(source, output):
     if model.estimates.S is None or model.estimates.S.shape != model.estimates.C.shape:
         raise RuntimeError("CNMF must include a full temporal update and deconvolution, not only initialization")
     model.estimates.Cn = np.nan_to_num(caiman.local_correlations(movie, swap_dim=False))
-    # Intermediate memory maps are not needed by MINISYNC and are not shipped.
+    # Intermediate memory maps are not needed by CALI and are not shipped.
     model.mmap_file = None
     model.params.set("data", {"fnames": [calcium_path.name]})
     model_path = output / "04_caiman_demo_CNMF.hdf5"
@@ -152,7 +152,7 @@ def create_demo(source, output):
     metadata["CNMF_parameters"] = {key: value for key, value in parameters.items() if key != "data"}
     metadata["CNMF_parameters"]["data"] = {"fr": fps_calcium, "decay_time": .4, "fnames": [calcium_path.name]}
     (output / "demo_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    instructions = f"""# Demo completa de MINISYNC con CaImAn
+    instructions = f"""# Demo completa de CALI con CaImAn
 
 El TIFF es el demo oficial de CaImAn ({n_frames} frames, {width} × {height} px).
 El HDF5 contiene un análisis CNMF REAL realizado con CaImAn {caiman.__version__}:
@@ -165,7 +165,7 @@ no permiten interpretar relaciones biológicas entre calcio y comportamiento.
 La frecuencia original del TIFF no se ha establecido. Se usa 20 Hz para esta demo.
 No se ha aplicado corrección de movimiento al TIFF ni al ajuste CNMF.
 
-## Abrir los archivos en MINISYNC
+## Abrir los archivos en CALI
 
 En Files, cargar:
 
@@ -196,7 +196,7 @@ First Mini2P frame en 1. Se muestran los {n_frames} samples de cada traza.
 ## Casos opcionales con huecos
 
 - 03b_camera_missing_TTLs_SIMULATED.csv omite tres pulsos, conservando todos
-  los frames en el MP4. MINISYNC debe reconstruir los tiempos faltantes.
+  los frames en el MP4. CALI debe reconstruir los tiempos faltantes.
 - 06b_tracking_missing_positions_SIMULATED.csv omite seis posiciones
   consecutivas. La alineación debe mantener vacío un hueco mayor al límite
   permitido; cambiar ese límite permite probar la interpolación controlada.

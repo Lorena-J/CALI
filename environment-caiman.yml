@@ -1,4 +1,4 @@
-name: minisync-caiman
+name: cali-caiman
 channels:
   - conda-forge
 dependencies:
