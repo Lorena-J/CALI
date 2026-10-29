@@ -1,7 +1,9 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="icons/logo/cali_logo_horizontal_dark.svg">
-  <img alt="CALI — Calcium Linked Behavior explorer" src="icons/logo/cali_logo_horizontal.svg" width="420">
-</picture>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="icons/logo/cali_logo_horizontal_dark.svg">
+    <img alt="CALI — Calcium Linked Behavior explorer" src="icons/logo/cali_logo_horizontal.svg" width="420">
+  </picture>
+</p>
 
 # CALI
 
