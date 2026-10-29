@@ -27,11 +27,10 @@ it does not generate behavioral tracking.
 Use **Python 3.11**. Local validation is on macOS Apple Silicon; other platforms
 have not yet been validated. The viewer and its tests do not require CaImAn.
 
-Clone the repository into a folder named `CALI` (the GitHub repository URL still
-uses the original name):
+Clone the repository into a folder named `CALI`:
 
 ```bash
-git clone https://github.com/Lorena-J/mini2p-sync-viewer.git CALI
+git clone https://github.com/Lorena-J/CALI.git CALI
 cd CALI
 conda env create -f environment.yml
 conda activate cali
