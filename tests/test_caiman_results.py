@@ -230,11 +230,29 @@ class CalciumViewerTests(unittest.TestCase):
         x, _ = self.v.calcium_curve.getData()
         self.assertTrue(x is None or len(x) == 0)
 
+    def test_loaded_images_do_not_cause_layout_resize_feedback(self):
+        self.v.show()
+        for width, height in ((1440, 860), (1180, 760), (1600, 1000)):
+            self.v.resize(width, height)
+            for _ in range(15):
+                self.app.processEvents()
+            self.v.cam_panel.set_frame(np.zeros((720, 1280), dtype=np.uint8), "Behavior")
+            self.v.mini_panel.set_frame(np.zeros((512, 512), dtype=np.uint8), "Mini2P")
+            states = []
+            for _ in range(60):
+                self.app.processEvents()
+                states.append((self.v.size().toTuple(),
+                               self.v.cam_panel.size().toTuple(),
+                               self.v.mini_panel.size().toTuple(),
+                               self.v.timeline_card.geometry().getRect()))
+            self.assertEqual(len(set(states[-20:])), 1)
+            self.assertEqual(self.v.size().toTuple(), (width, height))
+
     def test_loading_before_ttls_then_rebuilding_enables_sync(self):
         other = Viewer()
         try:
             other.set_caiman_results(self.path)
-            self.assertIn("TTL coverage 0/6", other.calcium_status.text())
+            self.assertEqual(other.calcium_status.text(), "")
             self.assertTrue(other.calcium_export.isEnabled())
             x, values = other.calcium_curve.getData()
             np.testing.assert_array_equal(x, np.arange(1, 7))
