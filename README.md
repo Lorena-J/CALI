@@ -69,7 +69,9 @@ for custom engine locations and compatibility constraints.
 
 ## What to load
 
-Use the **Files** buttons to select local files:
+Use the sidebar's **Load Files** tab for original data and **Load Processed Data**
+for CaImAn results. Below these, **Tracking** contains **Align tracking**, and
+**Analysis** contains **Movement analysis** and **Calcium analysis**.
 
 | Input | Purpose | Required format |
 | --- | --- | --- |

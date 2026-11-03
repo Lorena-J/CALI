@@ -17,19 +17,56 @@ Estética confirmada (2026-10-29): la cabecera usa
 `icons/logo/cali_logo_horizontal.svg` en modo claro y
 `icons/logo/cali_logo_horizontal_dark.svg` en modo oscuro. El SVG horizontal
 incluye el nombre y sustituye el icono anterior y el título adyacente.
-La columna derecha se alinea arriba con la barra lateral; el selector de tema
-se integra en la cabecera Mini2P. Los acentos de controles, leyendas e indicadores
+El selector de tema se coloca fuera de las tarjetas de vídeo, encima de ellas
+a la derecha (2026-11-03). Ambos lienzos de imagen ocupan toda su tarjeta,
+con títulos y controles fuera de la imagen, en una cabecera encima de cada
+tarjeta (2026-11-03); conservan la relación de aspecto.
+Los vídeos ocupan la zona superior hasta Navigate; Timeline comienza a la
+altura del borde superior de la tarjeta Navigate,
+altura siempre que queda espacio para sus controles. En ventanas pequeñas o
+en Calcium se reserva la altura mínima necesaria para los controles visibles.
+Los lienzos ignoran el tamaño sugerido del pixmap para distribuir el espacio;
+la imagen se escala al área interior y Timeline absorbe el espacio restante.
+Esto evita un bucle de redimensionado al cargar frames (2026-11-03).
+El selector circular de `theme_toggle.py`
+muestra playa al atardecer en modo día y una montaña con luna de fondo en
+modo noche, con la paleta del logo. El botón mide 42 px y cambia en 220 ms;
+el tema de la ventana se revela desde su centro en un círculo que se expande
+hasta cubrirla en 360 ms, con un borde ampliamente degradado para fundir ambos
+temas sin un contorno duro. Conserva clic, teclado
+y nombre accesible para cambiar de tema. Los acentos de controles, leyendas e indicadores
 usan violeta/magenta de día y amarillo/melocotón de noche, derivados del logo.
 El modo oscuro debe mantener oscuros todos los fondos de interfaz, incluidos
 controles, estados deshabilitados y diálogos. Los acentos claros se usan como
 texto o indicadores sobre superficies oscuras, también en botones de acción.
-La cabecera Timeline coloca Align tracking, Movement analysis y Calcium analysis
-a la derecha, con los colores antes usados por las etiquetas Camera, Mini2P y Gap,
-respectivamente; esas tres etiquetas se han retirado.
+Align tracking, Movement analysis y Calcium analysis conservan los colores
+antes usados por las etiquetas Camera, Mini2P y Gap, respectivamente;
+esas tres etiquetas se han retirado.
 Calcium analysis reutiliza la paleta de acentos de Viewer en ambos temas;
 Add TIFF usa violeta/amarillo; Run analysis usa lavanda, con fondo violeta
 oscuro y texto lavanda claro de noche (preferencia confirmada).
 Controles, desplegables y opciones avanzadas conservan fondos oscuros de noche.
+
+Reorganización de Files (2026-11-03, issue #6): el panel conserva
+su ubicación y contiene las pestañas `Load Files` y `Load Processed Data`.
+La primera muestra en una columna `Load behaviour timestamps`,
+`Load Mini2P timestamps`, `Behavior MP4` y `ScanImage TIFF`; la segunda
+contiene `CaImAn HDF5`, con el mismo lector de resultados y manifests.
+Las pestañas mantienen la misma altura al cambiar entre ellas.
+Las pestañas de carga tienen aspecto de carpetas: contorno alrededor del
+contenido, esquinas superiores redondeadas y pestaña activa unida al panel,
+con acento violeta de día y amarillo de noche.
+Se retira el título `Files` sobre las pestañas y se reduce la altura de sus
+cabeceras por preferencia de la responsable.
+Debajo de las pestañas de carga, en la misma tarjeta, se añaden otras dos:
+`Tracking` contiene `Align tracking`; `Analysis` contiene `Movement analysis`
+y `Calcium analysis`, en una columna. Estos botones se retiran de Timeline.
+Esta decisión sustituye la sección Analysis compartida inicialmente descrita
+en el issue. Ambos grupos usan el mismo estilo de pestañas. La barra lateral
+permite desplazamiento vertical cuando la altura de la ventana no basta.
+En Calcium se retira el resumen rutinario de componentes, frames, Full movie
+y cobertura TTL por preferencia de la responsable. Se conservan los avisos
+de calidad, selección vacía e incompatibilidades; el mapeo no cambia.
 
 
 CALI (CAlcium LInked Behavior explorer; antes MINISYNC) es una aplicación local de escritorio en Python para inspeccionar y
@@ -293,8 +330,8 @@ original como `frame_index`.
 
 ### Procesamiento implementado
 
-- Botón `Calcium analysis` en Timeline, junto a Align tracking y Movement analysis;
-  no en Files. No necesita TTL para calcular; la
+- Botón `Calcium analysis` en la pestaña lateral Analysis, junto a Movement analysis.
+  No necesita TTL para calcular; la
   sincronización posterior sigue necesitando los TTL reales.
 - Reutiliza el TIFF abierto en el visor (usar `tif.filehandle.path`, ya que
   `tif.filename` devuelve solo el nombre). Add TIFF añade archivos; la papelera
