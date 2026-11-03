@@ -3,7 +3,7 @@
 [Back to CALI](../README.md)
 
 
-Choose **Calcium analysis** in the Timeline header to process TIFFs with
+Choose **Calcium analysis** in the sidebar's **Analysis** tab to process TIFFs with
 CaImAn in a separate process. The viewer remains usable during computation.
 CaImAn is optional for viewing existing results; processing requires its own
 installation. Create an environment with:
@@ -27,7 +27,7 @@ for platform-specific requirements. The existing native ARM64 engine used for
 local validation is recorded in [the validation report](processing-validation.md);
 Rosetta is not a general requirement for CALI.
 
-1. Load your TIFF in Files, then open **Calcium analysis** in the Timeline.
+1. Load your TIFF in **Load Files**, then open **Calcium analysis** in **Analysis**.
    The loaded TIFF is reused. **Add TIFF** adds source files in selection order;
    the trash icon clears the analysis selection without deleting any files.
 2. Check **Frame rate (Hz)**. It is prefilled from ScanImage metadata, or estimated
@@ -56,7 +56,7 @@ Rosetta is not a general requirement for CALI.
 If no components passed the configured quality criteria, the initial filter
 falls back to **All components** so the candidates remain inspectable. Their
 saved accepted/rejected labels are preserved; visibility does not validate a cell.
-To reopen an existing run, use **CaImAn HDF5** in Files and select its
+To reopen an existing run, use **CaImAn HDF5** in **Load Processed Data** and select its
 `cnmf_results.hdf5` or `processing.json` (or `batch.json` for both channels).
 When the accompanying manifest exists, the corrected TIFF is loaded as well.
 
