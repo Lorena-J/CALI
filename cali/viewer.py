@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import sys
 import json
 import csv
@@ -11,8 +10,8 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 import tifffile
-from caiman_results import CaImAnResults
-from movement_dialog import MovementAnalysisDialog
+from .caiman_results import CaImAnResults
+from .movement_dialog import MovementAnalysisDialog
 from PySide6.QtCore import Qt, QTimer, Signal, QRect, QPoint, QPointF, QSize, QRectF
 from PySide6.QtGui import QImage, QPixmap, QIcon, QPainter, QPainterPath, QPen, QColor, QPalette
 from PySide6.QtSvgWidgets import QSvgWidget
@@ -1657,7 +1656,7 @@ class Viewer(QMainWindow):
                 self.err(exc)
 
     def open_calcium_processing(self):
-        from processing_dialog import CalciumProcessingDialog
+        from .processing_dialog import CalciumProcessingDialog
         dialog = getattr(self, "_calcium_processing_dialog", None)
         if dialog is None:
             dialog = CalciumProcessingDialog(self)
@@ -2001,7 +2000,7 @@ class Viewer(QMainWindow):
                 palette.setColor(QPalette.Disabled, role, QColor("#728596"))
         QApplication.setPalette(palette)
         logo_name = "cali_logo_horizontal.svg" if enabled else "cali_logo_horizontal_dark.svg"
-        logo_path = Path(__file__).parent / "icons" / "logo" / logo_name
+        logo_path = Path(__file__).parent / "assets" / "icons" / "logo" / logo_name
         self.brand_logo.load(str(logo_path))
         self.setWindowIcon(QIcon(str(logo_path)))
         action = "Switch to night mode" if enabled else "Switch to day mode"
@@ -2409,7 +2408,7 @@ class Viewer(QMainWindow):
                 border-radius: 18px;
             }
         """
-        icon_dir = Path(__file__).with_name("icons").as_posix()
+        icon_dir = (Path(__file__).parent / "assets" / "icons").as_posix()
         control_border = "#D2CCBF" if self.day_mode else "#2C4C62"
         stylesheet += f"""
             QTabWidget::pane {{ border: none; }}

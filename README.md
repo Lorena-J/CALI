@@ -1,19 +1,17 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="icons/logo/cali_logo_horizontal_dark.svg">
-    <img alt="CALI — Calcium Linked Behavior explorer" src="icons/logo/cali_logo_horizontal.svg" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="cali/assets/icons/logo/cali_logo_horizontal_dark.svg">
+    <img alt="CALI — Calcium Linked Behavior explorer" src="cali/assets/icons/logo/cali_logo_horizontal.svg" width="420">
   </picture>
 </p>
 
-# CALI
 
 **CA**lcium **LI**nked Behavior explorer is a local Python desktop application for
 inspecting Mini2P imaging and behavior video on a shared TTL timeline. It can
 align existing tracking data, run CaImAn motion correction and CNMF, and explore
 associations between calcium activity and movement.
 
-CALI was previously called MINISYNC. Its current acquisition focus is Mini2P;
-it does not generate behavioral tracking.
+Its current acquisition focus is Mini2P; it does not generate behavioral tracking.
 
 ![CALI in day mode, before loading data](docs/images/cali-day.png)
 
@@ -29,43 +27,49 @@ it does not generate behavioral tracking.
 Use **Python 3.11**. Local validation is on macOS Apple Silicon; other platforms
 have not yet been validated. The viewer and its tests do not require CaImAn.
 
-Clone the repository into a folder named `CALI`:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then
+clone the repository into a folder named `CALI` and install the `cali` command.
+uv downloads Python 3.11 if it is not already installed.
 
 ```bash
 git clone https://github.com/Lorena-J/CALI.git CALI
 cd CALI
-conda env create -f environment.yml
-conda activate cali
-python cali.py
+uv tool install --python 3.11 --editable . -c requirements-lock.txt
 ```
 
-If you already have this folder and the `cali` environment, activate it and run
-`python cali.py`; do not recreate your environment just to launch the application.
-
-Alternatively, with Python 3.11 installed, use a fresh virtual environment:
+Then open the application from any terminal, in any folder:
 
 ```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements-lock.txt
-python cali.py
+cali
 ```
 
-`requirements.txt` pins the viewer's direct dependencies. `requirements-lock.txt`
-also pins their runtime dependencies for the tested Python 3.11 stack. These
-files do not lock system libraries or guarantee identical builds across platforms.
-The Conda recipe installs that same viewer stack through pip.
+If the terminal answers `command not found`, run `uv tool update-shell` once
+and open a new terminal.
 
-To **process** TIFFs, install the separate optional CaImAn environment:
+- **Updating:** `git pull` inside `CALI` is enough, because the command runs
+  the code from this folder. Keep the folder where it is. If the dependencies
+  change, re-run the install command above with `--reinstall`.
+- **Uninstalling:** `uv tool uninstall cali`.
+
+`requirements.txt` and `pyproject.toml` pin the viewer's direct dependencies.
+`requirements-lock.txt` (and `uv.lock`) also pin their runtime dependencies for
+the tested Python 3.11 stack. These files do not lock system libraries or
+guarantee identical builds across platforms.
+
+To **process** TIFFs, install the separate optional CaImAn engine. CaImAn is
+distributed through conda-forge, so this step uses Conda (for example
+[Miniforge](https://github.com/conda-forge/miniforge)):
 
 ```bash
-conda env create -f environment-caiman.yml
+conda env create -f envs/environment-caiman.yml
 ```
 
-Return to `conda activate cali` to run the GUI. It detects the sibling
-`cali-caiman` environment automatically. Reading saved CaImAn HDF5 results needs
-only the viewer. See [processing setup and workflow](docs/calcium-processing.md)
-for custom engine locations and compatibility constraints.
+Do not install it with `pip install caiman` or `uv pip install caiman`: the
+`caiman` package on PyPI is an unrelated project. The viewer does not need to
+run inside the Conda environment; it finds the `cali-caiman` environment
+automatically. Reading saved CaImAn HDF5 results needs only the viewer. See
+[processing setup and workflow](docs/calcium-processing.md) for custom engine
+locations and compatibility constraints.
 
 ## What to load
 
@@ -136,20 +140,21 @@ of a movie, and failed or cancelled runs retain partial outputs.
 
 ## Tests
 
-Activate the viewer environment, then run from the repository root:
+From the repository root (`uv run` creates `.venv/` from `uv.lock` the first
+time):
 
 ```bash
-python -m pip check
-QT_QPA_PLATFORM=offscreen python -m unittest discover -s tests -v
+QT_QPA_PLATFORM=offscreen uv run python -m unittest discover -s tests -v
 ```
 
 The proposed GitHub Actions workflow runs these checks on macOS with Python
 3.11 after pushes and pull requests. Its presence does not mean a remote run has
 already passed; see the repository's Actions tab after publication.
 
-## License and third-party material
+## License
 
-A project license has not yet been selected. Licensing of the code and CALI's
-logos is pending an explicit decision. Dependencies and external example data
-have their own terms; no experimental recordings or example movies are bundled
-in this repository.
+This project is licensed under the MIT License © 2026 Lorena Jiménez and
+Anna Teruel-Sanchis. See the [LICENSE](LICENSE) file for details.
+
+Dependencies and external example data have their own terms; no experimental
+recordings or example movies are bundled in this repository.

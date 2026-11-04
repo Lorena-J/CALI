@@ -10,11 +10,11 @@ import numpy as np
 import pandas as pd
 from PySide6.QtWidgets import QApplication
 
-from movement_analysis import (prepare_speed, align_speed, duration_weights,
+from cali.movement_analysis import (prepare_speed, align_speed, duration_weights,
                                summarize_cell, pearson, lag_correlations, analyze_cells)
-from movement_dialog import MovementAnalysisDialog
-from cali import Viewer, TrackingAlignmentDialog
-from caiman_results import CaImAnResults
+from cali.movement_dialog import MovementAnalysisDialog
+from cali.viewer import Viewer, TrackingAlignmentDialog
+from cali.caiman_results import CaImAnResults
 from test_caiman_results import write_cnmf_fixture
 
 
@@ -139,7 +139,7 @@ class MovementWorkflowTests(unittest.TestCase):
         self.folder.cleanup()
 
     def analyze(self):
-        with patch("movement_dialog.QMessageBox.warning") as warning:
+        with patch("cali.movement_dialog.QMessageBox.warning") as warning:
             self.d.run_analysis()
         warning.assert_not_called()
         self.assertIsNotNone(self.d.summary)
@@ -174,8 +174,8 @@ class MovementWorkflowTests(unittest.TestCase):
 
     def test_export_includes_all_cells_alignment_lag_and_provenance(self):
         self.analyze()
-        with patch("movement_dialog.QFileDialog.getExistingDirectory", return_value=str(self.root)), \
-             patch("movement_dialog.QMessageBox.information"):
+        with patch("cali.movement_dialog.QFileDialog.getExistingDirectory", return_value=str(self.root)), \
+             patch("cali.movement_dialog.QMessageBox.information"):
             self.d.export_analysis()
         folder = next(self.root.glob("movement_*"))
         summary = pd.read_csv(folder/"per_cell_summary.csv")
@@ -191,7 +191,7 @@ class MovementWorkflowTests(unittest.TestCase):
         self.d.quality.setCurrentIndex(2)
         self.analyze()  # Fixture ROI 1 is rejected.
         self.v.calcium_first_frame.setValue(100)
-        with patch("movement_dialog.QMessageBox.warning") as warning:
+        with patch("cali.movement_dialog.QMessageBox.warning") as warning:
             self.d.run_analysis()
         warning.assert_called_once()
         self.assertIsNone(self.d.summary)
@@ -230,8 +230,8 @@ class MovementWorkflowTests(unittest.TestCase):
     def test_settings_changed_during_progress_prevent_stale_results(self):
         def change_threshold():
             self.d.threshold.setValue(self.d.threshold.value()+1)
-        with patch("movement_dialog.QApplication.processEvents", side_effect=change_threshold), \
-             patch("movement_dialog.QMessageBox.warning") as warning:
+        with patch("cali.movement_dialog.QApplication.processEvents", side_effect=change_threshold), \
+             patch("cali.movement_dialog.QMessageBox.warning") as warning:
             self.d.run_analysis()
         warning.assert_not_called()
         self.assertIsNone(self.d.summary)
