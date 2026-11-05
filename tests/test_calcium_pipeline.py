@@ -17,9 +17,9 @@ import tifffile
 from PySide6.QtCore import QEvent, QEventLoop, QProcess, QTimer
 from PySide6.QtWidgets import QApplication
 
-from calcium_pipeline import PipelineSettings, inspect_sources, inspect_tiff, prepare_movie, run_pipeline
-from processing_dialog import CalciumProcessingDialog
-from cali import Viewer
+from cali.calcium_pipeline import PipelineSettings, inspect_sources, inspect_tiff, prepare_movie, run_pipeline
+from cali.processing_dialog import CalciumProcessingDialog
+from cali.viewer import Viewer
 from test_caiman_results import write_cnmf_fixture
 
 
@@ -349,6 +349,45 @@ class ProcessingWorkflowTests(unittest.TestCase):
                                     single_plane_confirmed=True)
         with self.assertRaisesRegex(ValueError, "acquisition rate"):
             settings.validate()
+
+
+class EngineDiscoveryTests(unittest.TestCase):
+    """The viewer may run from a uv .venv while CaImAn lives in a Conda env."""
+
+    def make_python(self, env_dir, name):
+        python = Path(env_dir) / name / ("python.exe" if sys.platform == "win32" else "bin/python")
+        python.parent.mkdir(parents=True)
+        python.write_text("")
+        return python
+
+    def test_finds_conda_engine_from_conda_exe_when_viewer_uses_a_venv(self):
+        with TemporaryDirectory() as tmp:
+            conda_base = Path(tmp) / "miniforge3"
+            engine = self.make_python(conda_base / "envs", "cali-caiman")
+            (conda_base / "bin").mkdir()
+            env = {"CONDA_EXE": str(conda_base / "bin" / "conda")}
+            with patch.dict(os.environ, env), \
+                 patch.dict(os.environ, {"CALI_CAIMAN_PYTHON": "", "MINISYNC_CAIMAN_PYTHON": ""}), \
+                 patch("cali.processing_dialog.importlib.util.find_spec", return_value=None), \
+                 patch("cali.processing_dialog.sys.prefix", str(Path(tmp) / "CALI" / ".venv")), \
+                 patch("cali.processing_dialog.CONDA_ROOTS", ()):
+                self.assertEqual(CalciumProcessingDialog.default_engine_python(), str(engine.resolve()))
+
+    def test_finds_engine_in_usual_conda_root_without_conda_exe(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / "miniconda3"
+            engine = self.make_python(root / "envs", "caiman")
+            environ = {k: v for k, v in os.environ.items()
+                       if k not in ("CONDA_EXE", "CALI_CAIMAN_PYTHON", "MINISYNC_CAIMAN_PYTHON")}
+            with patch.dict(os.environ, environ, clear=True), \
+                 patch("cali.processing_dialog.importlib.util.find_spec", return_value=None), \
+                 patch("cali.processing_dialog.sys.prefix", str(Path(tmp) / "CALI" / ".venv")), \
+                 patch("cali.processing_dialog.CONDA_ROOTS", (str(root),)):
+                self.assertEqual(CalciumProcessingDialog.default_engine_python(), str(engine))
+
+    def test_override_variable_takes_precedence(self):
+        with patch.dict(os.environ, {"CALI_CAIMAN_PYTHON": "/custom/python"}):
+            self.assertEqual(CalciumProcessingDialog.default_engine_python(), "/custom/python")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cali"
+version = "0.1.0"
+description = "CALI: CAlcium LInked Behavior explorer for Mini2P imaging and behaviour video."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Lorena Jiménez" }, { name = "Anna Teruel-Sanchis" }]
+requires-python = ">=3.11,<3.12"
+# Direct viewer dependencies; keep in sync with requirements.txt.
+# requirements-lock.txt pins the full tested stack (install with -c).
+dependencies = [
+    "PySide6==6.11.2",
+    "pyqtgraph==0.14.0",
+    "opencv-python==5.0.0.93",
+    "tifffile==2026.3.3",
+    "pandas==3.0.6",
+    "numpy==2.4.6",
+    "h5py==3.16.0",
+]
+
+[project.scripts]
+cali = "cali.viewer:main"
+
+[tool.uv]
+# Transitive pins from requirements-lock.txt, so `uv sync`/`uv run` and uv.lock
+# keep the tested stack. Keep both files in sync when updating dependencies.
+constraint-dependencies = [
+    "colorama==0.4.6",
+    "packaging==26.3",
+    "PySide6_Addons==6.11.2",
+    "PySide6_Essentials==6.11.2",
+    "python-dateutil==2.9.0.post0",
+    "shiboken6==6.11.2",
+    "six==1.17.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["cali"]

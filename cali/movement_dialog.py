@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget, QAbstractItemView, QHeaderView,
 )
 
-from movement_analysis import prepare_speed, align_speed, analyze_cells, lag_correlations
+from .movement_analysis import prepare_speed, align_speed, analyze_cells, lag_correlations
 
 
 class MovementAnalysisDialog(QDialog):
@@ -193,7 +193,7 @@ class MovementAnalysisDialog(QDialog):
         background, card = ("#F2EEE5", "#FAF7F0") if day else ("#102131", "#14283A")
         text, border = ("#454D46", "#D2CCBF") if day else ("#EAF5FA", "#315067")
         accent = "#287D71" if day else "#12C4BE"
-        icon_dir = Path(__file__).with_name("icons").as_posix()
+        icon_dir = (Path(__file__).parent / "assets" / "icons").as_posix()
         self.setStyleSheet(f"""
             QDialog {{ background: {background}; }}
             QLabel, QCheckBox {{ color: {text}; }}

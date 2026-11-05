@@ -4,26 +4,51 @@
 
 ## Viewer environment
 
-The supported local test target is Python 3.11 on macOS Apple Silicon. Create a
-new `cali` Conda environment with `environment.yml`, or a fresh virtual environment
-and install `requirements-lock.txt`, as described in the README. Keep CaImAn in
-its separate environment. Do not update an existing working environment merely
-to test a proposed dependency change.
+The supported local test target is Python 3.11 on macOS Apple Silicon. Users
+install the `cali` command with `uv tool install` (see the README). For
+development, run `uv sync` in the repository: it creates `.venv/` from
+`uv.lock` with an editable install of the package, and `uv run cali` or
+`uv run python -m unittest ...` use it. Keep CaImAn in its separate Conda
+environment (`envs/environment-caiman.yml`). Do not update an existing working
+environment merely to test a proposed dependency change.
 
-`requirements.txt` pins direct viewer dependencies; `requirements-lock.txt`
-includes those pins plus the runtime dependencies resolved for this stack.
-When updating dependencies, resolve in a clean environment, run `python -m pip
-check`, execute the full suite, and inspect both UI themes. Update both files
-and record the tested platform. These are version pins, not a hash-verified or
+Dependency pins live in four places that must agree: `pyproject.toml`
+(`dependencies` for direct pins, `[tool.uv] constraint-dependencies` for
+transitive ones), `uv.lock` (regenerate with `uv lock`), `requirements.txt`
+(direct) and `requirements-lock.txt` (direct plus transitive; used by CI and
+as `-c` constraints for `uv tool install`). When updating dependencies, resolve
+in a clean environment, run `uv pip check`, execute the full suite, and inspect
+both UI themes. Update all four and record the tested platform. These are version pins, not a hash-verified or
 platform-complete lock for Conda, system libraries or the CaImAn environment.
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `cali/` | Application package: `viewer.py` (main window, TTL, tracking alignment), `caiman_results.py`, `calcium_pipeline.py` (CaImAn worker), `processing_dialog.py`, `movement_analysis.py`, `movement_dialog.py`. |
+| `cali/assets/icons/` | Interface icons and logos loaded at runtime. |
+| `tests/` | `unittest` suite with synthetic fixtures. |
+| `scripts/` | Generators for the CaImAn demo and the processing test pack. |
+| `docs/` | User and developer guides, validation records and screenshots. |
+| `envs/` | Conda recipe for the optional CaImAn engine (`cali-caiman`). The viewer is installed with uv into `.venv/`. |
+| `datasets/` | Local test data; contents are ignored by Git. |
+| `pyproject.toml`, `uv.lock` | Package metadata, the `cali` command (`cali.viewer:main`) and the uv lock. |
+| `requirements*.txt` | Pinned viewer dependencies (kept at the root for pip and CI). |
+
+`cali/__init__.py` must stay free of imports. The viewer starts the CaImAn
+worker by file path (`<engine python> cali/calcium_pipeline.py`), not with
+`-m`: that way only the `cali/` folder joins the worker's `sys.path` and the
+engine never imports the viewer's own NumPy or Qt. `calcium_pipeline.py`
+therefore falls back to a plain `from caiman_results import ...`.
 
 ## Tests
 
-From the repository root, with the viewer environment active:
+From the repository root:
 
 ```bash
-python -m pip check
-QT_QPA_PLATFORM=offscreen python -m unittest discover -s tests -v
+uv sync
+uv pip check
+QT_QPA_PLATFORM=offscreen uv run python -m unittest discover -s tests -v
 ```
 
 Tests create temporary fixtures and include Qt processing orchestration,
@@ -32,8 +57,11 @@ suite does not require a CaImAn installation and does not prove a complete CNMF
 run or compatibility with real multichannel ScanImage recordings. See the
 [processing validation record](processing-validation.md) for separate engine runs.
 
-The application entry point and test imports are `cali.py` / `cali`.
-Run `python cali.py` for a normal interactive launch. Offscreen tests do not
+The application code is the `cali/` package. The `cali` command and
+`python -m cali` (`cali/__main__.py`) both start `cali.viewer.main`. Tests import modules as
+`cali.viewer`, `cali.caiman_results`, and so on, and mock targets use those
+names (for example `cali.viewer.QMessageBox`). Run `uv run cali` from the
+repository root for a normal interactive launch. Offscreen tests do not
 replace visual inspection or a normal-event-loop startup/shutdown check.
 
 ## GitHub Actions
@@ -60,5 +88,5 @@ the files on disk. The current cleanup does not rewrite repository history.
 The older validation report intentionally retains the environment names and
 paths used at the time.
 
-The code and logo license decision is pending; do not add a license without the
-maintainer's explicit selection.
+The repository is released under the MIT License (see [LICENSE](../LICENSE)),
+© 2026 Lorena Jiménez and Anna Teruel-Sanchis.

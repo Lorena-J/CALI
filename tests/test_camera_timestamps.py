@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from cali import fill_camera_timestamps, virtual_camera_indices
+from cali.viewer import fill_camera_timestamps, virtual_camera_indices
 
 
 class CameraTimestampTests(unittest.TestCase):

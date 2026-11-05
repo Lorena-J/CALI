@@ -17,7 +17,17 @@ from PySide6.QtWidgets import (
     QToolButton, QVBoxLayout, QWidget, QScrollArea,
 )
 
-from calcium_pipeline import PipelineSettings, inspect_tiff, inspect_sources, write_manifest
+from .calcium_pipeline import PipelineSettings, inspect_tiff, inspect_sources, write_manifest
+
+
+# CaImAn environment names searched for the engine, newest name first.
+ENGINE_ENV_NAMES = ("caiman", "cali-caiman", "minisync-caiman")
+# Usual Conda installations, used when CONDA_EXE is not set (e.g. launched from a GUI).
+CONDA_ROOTS = (
+    "~/miniforge3", "~/mambaforge", "~/miniconda3", "~/anaconda3",
+    "/opt/homebrew/Caskroom/miniforge/base", "/opt/homebrew/Caskroom/miniconda/base",
+    "/opt/miniconda3", "/opt/conda",
+)
 
 
 class CalciumProcessingDialog(QDialog):
@@ -59,7 +69,7 @@ class CalciumProcessingDialog(QDialog):
         self.add_button.setObjectName("analysisAdd")
         self.add_button.clicked.connect(self.add_sources)
         self.remove_button = QToolButton()
-        self.remove_button.setIcon(QIcon(str(Path(__file__).with_name("icons") / "trash.svg")))
+        self.remove_button.setIcon(QIcon(str((Path(__file__).parent / "assets" / "icons") / "trash.svg")))
         self.remove_button.setFixedSize(34, 34)
         self.remove_button.setToolTip("Remove TIFFs from this analysis")
         self.remove_button.setAccessibleName("Remove TIFFs")
@@ -175,7 +185,7 @@ class CalciumProcessingDialog(QDialog):
             background, card, field = "#102131", "#14283A", "#193347"
             text, muted, border, disabled = "#EAF5FA", "#91A6B7", "#315067", "#728596"
         run_text = "#5C53A5" if day else "#D6C9F0"
-        icons = Path(__file__).with_name("icons").as_posix()
+        icons = (Path(__file__).parent / "assets" / "icons").as_posix()
         self.setStyleSheet(f'''
             QDialog#calciumAnalysisDialog {{ background: {background}; color: {text}; }}
             QWidget#analysisAdvanced {{ background: {card}; border: 1px solid {border}; border-radius: 14px; }}
@@ -257,12 +267,33 @@ class CalciumProcessingDialog(QDialog):
             return str(Path(override).expanduser())
         if importlib.util.find_spec("caiman") is not None:
             return sys.executable
-        suffix = Path("python.exe") if sys.platform == "win32" else Path("bin/python")
-        for name in ("caiman", "cali-caiman", "minisync-caiman"):
-            candidate = Path(sys.prefix).parent / name / suffix
+        for candidate in CalciumProcessingDialog.engine_candidates():
             if candidate.is_file():
                 return str(candidate)
         raise RuntimeError("CaImAn is unavailable. Install the analysis environment before running.")
+
+    @staticmethod
+    def engine_candidates():
+        """Possible engine interpreters, in search order.
+
+        The viewer may run from a uv/venv environment inside the repository while
+        CaImAn lives in a Conda environment, so besides sibling environments the
+        Conda `envs/` folders are searched too.
+        """
+        suffix = Path("python.exe") if sys.platform == "win32" else Path("bin/python")
+        env_dirs = [Path(sys.prefix).parent]
+        conda_exe = os.environ.get("CONDA_EXE")
+        if conda_exe:
+            env_dirs.append(Path(conda_exe).expanduser().resolve().parent.parent / "envs")
+        env_dirs += [Path(root).expanduser() / "envs" for root in CONDA_ROOTS]
+        seen, candidates = set(), []
+        for env_dir in env_dirs:
+            for name in ENGINE_ENV_NAMES:
+                candidate = env_dir / name / suffix
+                if candidate not in seen:
+                    seen.add(candidate)
+                    candidates.append(candidate)
+        return candidates
 
     @staticmethod
     def integer(low, high, value):
@@ -430,9 +461,11 @@ class CalciumProcessingDialog(QDialog):
             env.insert(name, "1")
         env.insert("MPLBACKEND", "Agg")
         self.process.setProcessEnvironment(env)
-        self.process.setWorkingDirectory(str(Path(__file__).parent))
+        # Run the worker by file path: only the cali/ folder joins its sys.path, so
+        # the engine never picks up the viewer's own packages (NumPy, Qt, ...).
+        self.process.setWorkingDirectory(str(Path(__file__).resolve().parent))
         self.set_status("Running analysis…" if len(self.jobs) == 1 else f"Running analysis · channel {self.job_index + 1} of {len(self.jobs)}…")
-        self.process.start(python, ["-u", str(Path(__file__).with_name("calcium_pipeline.py")), "--config", str(self.config_path)])
+        self.process.start(python, ["-u", str(Path(__file__).resolve().with_name("calcium_pipeline.py")), "--config", str(self.config_path)])
 
     def is_running(self):
         return self.process.state() != QProcess.NotRunning

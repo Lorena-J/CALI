@@ -9,17 +9,21 @@ CaImAn is optional for viewing existing results; processing requires its own
 installation. Create an environment with:
 
 ```bash
-conda env create -f environment-caiman.yml
+conda env create -f envs/environment-caiman.yml
 ```
 
 The environment pins CaImAn 1.12.1 and constrains `setuptools<81` and
 `scipy<1.17`: newer versions respectively remove `pkg_resources` or change
 Toeplitz matrix handling used by this CaImAn release's deconvolution.
 
-The viewer and worker use separate Python environments when needed. The engine
-is located automatically in the current environment or a sibling Conda environment
-named `caiman` or `cali-caiman` (the older `minisync-caiman` name is still
-detected); interpreter paths are not exposed in the UI. For custom installations,
+The viewer (uv `.venv`) and worker (Conda) use separate Python environments.
+The engine is located automatically: in the viewer's own environment if it
+contains CaImAn, in a sibling environment, or in the `envs/` folder of the Conda
+installation (found through `CONDA_EXE` or the usual Miniforge, Miniconda,
+Anaconda and Homebrew locations). Environment names searched are `caiman` and
+`cali-caiman` (the older `minisync-caiman` name is still detected); interpreter
+paths are not exposed in the UI. Do not use `pip install caiman`: that PyPI
+package is unrelated to CaImAn. For custom installations,
 set the `CALI_CAIMAN_PYTHON` environment variable (`MINISYNC_CAIMAN_PYTHON` is
 still accepted).
 See the [CaImAn installation guide](https://caiman.readthedocs.io/en/latest/Installation.html)
@@ -97,10 +101,10 @@ On failure, inspect the log and manifest; rerun in a new output folder. Cancel
 an active job before closing the application.
 
 For scripted runs, save a JSON object with the fields of
-`calcium_pipeline.PipelineSettings` and run the worker directly:
+`cali.calcium_pipeline.PipelineSettings` and run the worker directly:
 
 ```bash
-/path/to/caiman/python calcium_pipeline.py --config /path/to/settings.json
+/path/to/caiman/python /path/to/CALI/cali/calcium_pipeline.py --config /path/to/settings.json
 ```
 
 The configured output directory must not exist. No example data or TTLs are

@@ -272,7 +272,10 @@ def run_pipeline(settings, progress=print):
         result_path = output / "cnmf_results.hdf5"
         stage("Saving CaImAn results")
         model.save(str(result_path))
-        from caiman_results import CaImAnResults
+        try:
+            from .caiman_results import CaImAnResults
+        except ImportError:  # run as a script by the viewer (no parent package)
+            from caiman_results import CaImAnResults
         result = CaImAnResults(result_path)
         if result.n_frames != expected_count or not {"S", "F_dff"}.issubset(result.trace_types):
             raise RuntimeError("Saved CNMF result is missing expected frames or temporal signals.")

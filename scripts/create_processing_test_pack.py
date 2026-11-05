@@ -18,7 +18,7 @@ import pandas as pd
 import tifffile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from calcium_pipeline import PipelineSettings
+from cali.calcium_pipeline import PipelineSettings
 
 
 def checksum(path):
@@ -132,7 +132,7 @@ Desde el directorio del proyecto:
 
 ```bash
 conda activate cali
-python cali.py
+cali
 ```
 
 ## 2. Probar corrección de movimiento y CNMF (solo necesita el TIFF)
@@ -179,7 +179,7 @@ coordenadas o analizar movimiento/reposo, funciones que no cubre este paquete.
 Con el Python de CaImAn, ejecutar desde el directorio del proyecto:
 
 ```bash
-/opt/homebrew/Caskroom/miniconda/base/envs/caiman/bin/python calcium_pipeline.py --config "{output / 'parametros_procesamiento.json'}"
+/opt/homebrew/Caskroom/miniconda/base/envs/caiman/bin/python cali/calcium_pipeline.py --config "{output / 'parametros_procesamiento.json'}"
 ```
 
 El JSON usa rutas absolutas de esta carpeta. Si la mueves, actualiza esas rutas.
