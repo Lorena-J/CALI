@@ -146,15 +146,38 @@ Names and paths in historical reports are preserved.
 
 ## Code map
 
+Viewer module extraction (2026-11-17, issue #10): readers, image widgets,
+themes, TTL functions, tracking and video encoding are split into the modules
+below. Tracking/movement share Qt-free functions rather than a hidden dialog.
+Calcium browsing stays in `Viewer` because it shares the cursor, playback and
+source state; a separate calcium panel is deferred. This refactor preserves
+current synchronization, input validation and export formats; it does not fix
+the pending TTL issues or add acquisition support.
+
+Local validation after extraction: 80 tests passed in the existing `cali`
+Conda environment (75 existing plus dependency-boundary/video-export checks).
+Offscreen checks inside a normal Qt event loop covered source loading,
+navigation, tracking and crop/trim exports including metadata, then shutdown.
+Viewer, tracking and processing screenshots matched `origin/main` pixel for
+pixel in both themes. These checks do not establish real-acquisition or full
+CaImAn pipeline validation.
+
 | File | Responsibility |
 | --- | --- |
-| `cali/viewer.py` (formerly `cali.py`) | `Viewer` window, TTL loading and reconstruction, navigation, images, visual theme, trimming and exports; also contains `TrackingAlignmentDialog`. |
+| `cali/viewer.py` (formerly `cali.py`) | `Viewer` window, shared source state, timeline/navigation, calcium browsing and export interaction; delegates the extracted readers, timing, widgets, theme and video encoding. |
+| `cali/timing.py` | Qt-free TTL CSV loading, median intervals, virtual indices and camera timestamp reconstruction. Existing validation/reconstruction semantics are preserved. |
+| `cali/readers.py` | `Cache`, `VideoReader` and `TiffReader`, including bounded frame caches. |
+| `cali/image_widgets.py` | Image conversion, `CropImageLabel` and `ImagePanel`: spatial crop selection and ROI overlays. |
+| `cali/theme.py` | Viewer palettes, stylesheet and theme icon construction. Applying the theme to window state remains in `Viewer`. |
+| `cali/tracking.py` | Qt-free tracking CSV/DLC reading, frame indices, video times, interpolation and coordinate alignment/provenance table. |
+| `cali/tracking_dialog.py` | `TrackingAlignmentDialog`: controls, viewer-to-data adaptation, plots and export interaction. |
+| `cali/video_exports.py` | Qt-free prefix/cropped/aligned video encoding and JSON/CSV sidecars. Progress/cancellation callbacks come from the caller, which retains partial-output cleanup. |
 | `cali/caiman_results.py` | `CaImAnResults`: HDF5 reader that does not import CaImAn, matrix validation, component quality, traces, footprints and mapping of samples to Mini2P frames. |
 | `cali/calcium_pipeline.py` | Qt-free worker/CLI: TIFF validation, channel separation, motion correction, CNMF, deconvolution, quality, ΔF/F and provenance. Imports CaImAn only when running the computation. |
 | `cali/processing_dialog.py` | `CalciumProcessingDialog`: reuses the loaded TIFF, basic/advanced controls, internal engine detection, QProcess, per-channel jobs and automatic loading into the viewer. |
 | `envs/environment-caiman.yml` | Optional engine environment, separate from the interface: Python 3.11, CaImAn 1.12.1, setuptools<81 and scipy<1.17. |
 | `cali/movement_analysis.py` | Numerical computation separated from Qt: speed, valid segments, interpolation, time weights, per-cell summary and lagged correlation. |
-| `cali/movement_dialog.py` | `MovementAnalysisDialog`: configuration, per-cell table, plots, ROI selection, result invalidation and export. Receives the tracking class as a factory to reuse its reader and mapping. |
+| `cali/movement_dialog.py` | `MovementAnalysisDialog`: configuration, per-cell table, plots, ROI selection, result invalidation and export. Uses `tracking.py` directly without constructing a tracking dialog. |
 | `scripts/create_caiman_demo.py` | Generator for a demo with a real CNMF fit and simulated auxiliary data. Requires a separate CaImAn environment. |
 | `tests/` | `unittest` tests with synthetic data, plus Qt workflow and export tests. |
 | `cali/assets/icons/` | Icons and logos loaded at runtime (includes `logo/mini2p_logo_mark.png`, currently unused). |
