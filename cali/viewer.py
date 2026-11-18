@@ -367,6 +367,23 @@ class CropImageLabel(QLabel):
         painter.end()
 
 
+class FrameSlider(QSlider):
+    """Mini2P frame slider that leaves CALI's navigation keys to the window.
+
+    Left/Right and PageUp/PageDown already step frames and jump gaps anywhere
+    in the viewer, so the slider passes them on instead of moving by itself.
+    Home/End still jump to the first/last frame.
+    """
+
+    NAVIGATION_KEYS = (Qt.Key_Left, Qt.Key_Right, Qt.Key_PageUp, Qt.Key_PageDown)
+
+    def keyPressEvent(self, event):
+        if event.key() in self.NAVIGATION_KEYS:
+            event.ignore()
+            return
+        super().keyPressEvent(event)
+
+
 class ImagePanel(QFrame):
     cropChanged = Signal(object)
     exportCropRequested = Signal()
@@ -1289,45 +1306,17 @@ class Viewer(QMainWindow):
         src_lay.addLayout(src_grid)
         side.addWidget(src_card)
 
-        # Navigate --------------------------------------------------
+        # Video mapping ---------------------------------------------
+        # Frame navigation lives under the Timeline (frame slider row).
         controls_card = self.card("sideCard")
         controls_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         controls_lay = QVBoxLayout(controls_card)
         controls_lay.setContentsMargins(13, 12, 13, 12)
         controls_lay.setSpacing(10)
 
-        controls_title = QLabel("Navigate")
+        controls_title = QLabel("Video mapping")
         controls_title.setObjectName("sectionTitle")
         controls_lay.addWidget(controls_title)
-
-        for label_text, back_fn, forward_fn in (
-            ("Frame", lambda: self.step_mini(-1), lambda: self.step_mini(1)),
-            ("Gap", lambda: self.jump_gap(-1), lambda: self.jump_gap(1)),
-        ):
-            row = QHBoxLayout()
-            row.setSpacing(6)
-            row_label = QLabel(label_text)
-            row_label.setObjectName("navRowLabel")
-            row.addWidget(row_label)
-            row.addStretch()
-            back = QPushButton("‹")
-            forward = QPushButton("›")
-            for button, fn in ((back, back_fn), (forward, forward_fn)):
-                button.setProperty("variant", "navStep")
-                button.setFixedSize(38, 34)
-                button.setCursor(Qt.PointingHandCursor)
-                button.clicked.connect(fn)
-                row.addWidget(button)
-            controls_lay.addLayout(row)
-
-        nav_sep = QFrame()
-        nav_sep.setObjectName("sideSeparator")
-        nav_sep.setFixedHeight(1)
-        controls_lay.addWidget(nav_sep)
-
-        mapping_header = QLabel("Video mapping")
-        mapping_header.setObjectName("navSubhead")
-        controls_lay.addWidget(mapping_header)
 
         self.mode = QComboBox()
         self.mode.setObjectName("videoMapping")
@@ -1478,6 +1467,36 @@ class Viewer(QMainWindow):
         self.build_calcium_tab()
         self.timeline_tabs.currentChanged.connect(self.calcium_tab_changed)
         timeline_lay.addWidget(self.timeline_tabs)
+
+        # Mini2P frame slider ----------------------------------------
+        frame_row = QHBoxLayout()
+        frame_row.setSpacing(7)
+        self.frame_back_btn = QPushButton("‹")
+        self.frame_forward_btn = QPushButton("›")
+        for button, step, name in (
+            (self.frame_back_btn, -1, "Previous Mini2P frame"),
+            (self.frame_forward_btn, 1, "Next Mini2P frame"),
+        ):
+            button.setProperty("variant", "navStep")
+            button.setFixedSize(38, 34)
+            button.setCursor(Qt.PointingHandCursor)
+            button.setToolTip(name)
+            button.setAccessibleName(name)
+            button.clicked.connect(lambda _=False, step=step: self.step_frame_slider(step))
+        self.frame_slider = FrameSlider(Qt.Horizontal)
+        self.frame_slider.setObjectName("frameSlider")
+        self.frame_slider.setAccessibleName("Mini2P frame")
+        self.frame_slider.setCursor(Qt.PointingHandCursor)
+        self.frame_slider.valueChanged.connect(self.frame_slider_moved)
+        self.frame_label = QLabel()
+        self.frame_label.setObjectName("frameSliderLabel")
+        self.frame_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        frame_row.addWidget(self.frame_back_btn)
+        frame_row.addWidget(self.frame_slider, 1)
+        frame_row.addWidget(self.frame_forward_btn)
+        frame_row.addWidget(self.frame_label)
+        timeline_lay.addLayout(frame_row)
+        self.sync_frame_slider()
 
         # Trim toolbar ----------------------------------------------
         trim_sep = QFrame()
@@ -2120,17 +2139,6 @@ class Viewer(QMainWindow):
             font-weight: 650;
             background: transparent;
         }
-        QLabel#navSubhead {
-            color: #7FDCE9;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            background: transparent;
-        }
-        QFrame#sideSeparator {
-            background: #27485D;
-            border: none;
-        }
         QLabel#subtleText, QLabel#sidebarBody {
             color: #91A6B7;
             background: transparent;
@@ -2343,8 +2351,7 @@ class Viewer(QMainWindow):
                 color: #575C54;
             }
             QLabel#subtleText, QLabel#sidebarBody { color: #686B61; }
-            QLabel#navSubhead { color: #287B77; }
-            QFrame#sideSeparator, QFrame#trimSeparator { background: #DCD5C8; }
+            QFrame#trimSeparator { background: #DCD5C8; }
             QLabel#imageCanvas {
                 background: #EDE8DE;
                 color: #737469;
@@ -2495,12 +2502,14 @@ class Viewer(QMainWindow):
                     background: #193347; color: #EAF5FA; border-color: #315067;
                 }
                 QCheckBox::indicator:unchecked { background: #14283A; border-color: #728596; }
-                QSlider::groove:horizontal { background: #213B4F; }
+                QSlider::groove:horizontal { background: #213B4F; height: 6px; border-radius: 3px; }
+                QSlider::sub-page:horizontal { border-radius: 3px; }
+                QSlider::handle:horizontal { width: 14px; margin: -5px 0; border: 1px solid; border-radius: 4px; }
+                QSlider::handle:horizontal:disabled { background: #2B465B; border-color: #2B465B; }
             """
         accents = self.accent_palette()
         stylesheet += f"""
             QWidget {{ selection-background-color: {accents['tint']}; selection-color: {accents['tint_text']}; }}
-            QLabel#navSubhead {{ color: {accents['mini_text']}; }}
             QLabel#trimStatusPill {{
                 background: {accents['tint']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
             }}
@@ -2540,8 +2549,8 @@ class Viewer(QMainWindow):
             QTabBar::tab {{ background: {accents['soft']}; color: {accents['muted']}; }}
             QTabBar::tab:selected {{ background: {accents['tint']}; color: {accents['tint_text']}; }}
             QCheckBox::indicator:checked {{ background: {accents['secondary']}; border-color: {accents['secondary']}; }}
-            QSlider::sub-page:horizontal {{ background: {accents['primary']}; }}
-            QSlider::handle:horizontal {{ background: {accents['primary']}; border-color: {accents['primary_hover']}; }}
+            QSlider::sub-page:horizontal {{ background: {accents['camera']}; }}
+            QSlider::handle:horizontal {{ background: {accents['camera']}; border-color: {accents['primary_hover']}; }}
         """
         for role, background, text in (
             ("camera", accents["tint"], accents["tint_text"]),
@@ -2684,9 +2693,44 @@ class Viewer(QMainWindow):
             self.plot.setXRange(lo - m, hi + m, padding=0)
         self.update_trim_visual()
         self.refresh_calcium_trace()
+        self.sync_frame_slider()
 
     def nearest(self, a, t):
         return None if a is None or len(a) == 0 else int(np.argmin(np.abs(a - t)))
+
+    def sync_frame_slider(self):
+        """Match the frame slider to the visible Mini2P frames and the cursor.
+
+        The slider covers the same frames as the Left/Right keys: the loaded
+        Mini2P TTL frames, cut at the trim point if one is set.
+        """
+        mini_t, _ = self.visible_timeline_times()
+        count = 0 if mini_t is None else len(mini_t)
+        index = self.nearest(mini_t, self.current_t) if count else 0
+        self.frame_slider.blockSignals(True)
+        self.frame_slider.setRange(0, max(count - 1, 0))
+        self.frame_slider.setValue(index)
+        self.frame_slider.blockSignals(False)
+        self.frame_slider.setEnabled(count > 0)
+        self.frame_back_btn.setEnabled(count > 0 and index > 0)
+        self.frame_forward_btn.setEnabled(count > 0 and index < count - 1)
+        if count:
+            frame = int(self.mini_df.frame.iloc[index])
+            self.frame_label.setText(f"Mini2P frame {frame} · {index + 1}/{count}")
+            # Reserve room for the longest label so the slider doesn't shift while scrubbing.
+            widest = f"Mini2P frame {int(self.mini_df.frame.iloc[:count].max())} · {count}/{count}"
+            self.frame_label.setMinimumWidth(self.frame_label.fontMetrics().horizontalAdvance(widest))
+        else:
+            self.frame_label.setText("No Mini2P TTL loaded")
+
+    def frame_slider_moved(self, index):
+        mini_t, _ = self.visible_timeline_times()
+        if mini_t is not None and 0 <= index < len(mini_t):
+            self.set_time(float(mini_t[index]))
+
+    def step_frame_slider(self, step):
+        # setValue() clamps to the first/last frame and then moves the cursor.
+        self.frame_slider.setValue(self.frame_slider.value() + step)
 
     def set_time(self, t):
         self.current_t = float(t)
@@ -2699,6 +2743,7 @@ class Viewer(QMainWindow):
         self.cursor_line.blockSignals(True)
         self.cursor_line.setValue(self.current_t)
         self.cursor_line.blockSignals(False)
+        self.sync_frame_slider()
         self.calcium_cursor.blockSignals(True)
         position = (1 + (self.calcium_sample_index or 0)
                     if self.calcium_movie_mode else self.current_t)
