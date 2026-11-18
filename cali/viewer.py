@@ -367,6 +367,50 @@ class CropImageLabel(QLabel):
         painter.end()
 
 
+class TimelineCursor(pg.InfiniteLine):
+    """Vertical plot cursor that is easy to grab and drag.
+
+    The pointer can grab it within GRAB_PX screen pixels of the line, and the
+    line thickens while the pointer is in that zone or a drag is in progress.
+    """
+
+    GRAB_PX = 6
+    WIDTH = 1.4
+    HOVER_WIDTH = 3.5
+
+    def __init__(self, color="#F0F7FC"):
+        super().__init__(angle=90, movable=True)
+        self.setCursor(Qt.SizeHorCursor)
+        self.set_color(color)
+
+    def set_color(self, color):
+        self.setPen(pg.mkPen(color, width=self.WIDTH))
+        self.setHoverPen(pg.mkPen(color, width=self.HOVER_WIDTH))
+
+    def _computeBoundingRect(self):
+        # pyqtgraph pads the hit area by its marker size; borrow that padding
+        # (this cursor has no markers) to widen the grab zone.
+        markers = self._maxMarkerSize
+        self._maxMarkerSize = markers + self.GRAB_PX
+        try:
+            return super()._computeBoundingRect()
+        finally:
+            self._maxMarkerSize = markers
+
+    def setMouseHover(self, hover):
+        # A fast drag can outrun the pointer; stay thick until the drag ends.
+        if self.moving and not hover:
+            return
+        super().setMouseHover(hover)
+
+    def mouseDragEvent(self, ev):
+        super().mouseDragEvent(ev)
+        if ev.isStart() and self.moving:
+            # The drag starts a few pixels from where it was pressed, so the
+            # hover check before it may have just left the line; keep it thick.
+            self.setMouseHover(True)
+
+
 class ImagePanel(QFrame):
     cropChanged = Signal(object)
     exportCropRequested = Signal()
@@ -1445,11 +1489,7 @@ class Viewer(QMainWindow):
         self.plot.addItem(self.mini_pts)
         self.plot.addItem(self.gap_pts)
 
-        self.cursor_line = pg.InfiniteLine(
-            angle=90,
-            movable=True,
-            pen=pg.mkPen(240, 247, 252, width=1.4),
-        )
+        self.cursor_line = TimelineCursor()
         self.plot.addItem(self.cursor_line)
         self.cursor_line.sigPositionChanged.connect(
             lambda: self.set_time(float(self.cursor_line.value()))
@@ -1602,7 +1642,7 @@ class Viewer(QMainWindow):
         self.calcium_curve = self.calcium_plot.plot([], [], pen=pg.mkPen("#087D78", width=1.5), connect="finite")
         self.calcium_curve.setClipToView(True)
         self.calcium_curve.setDownsampling(auto=True, method="peak")
-        self.calcium_cursor = pg.InfiniteLine(angle=90, movable=True)
+        self.calcium_cursor = TimelineCursor()
         self.calcium_plot.addItem(self.calcium_cursor)
         self.calcium_cursor.sigPositionChanged.connect(self.calcium_cursor_moved)
         self.calcium_plot.scene().sigMouseClicked.connect(self.calcium_clicked)
@@ -2016,7 +2056,7 @@ class Viewer(QMainWindow):
             axis = self.plot.getAxis(axis_name)
             axis.setPen(pg.mkPen("#C5BEB1" if enabled else "#315067"))
             axis.setTextPen(pg.mkPen("#625E55" if enabled else "#C8D7E3"))
-        self.cursor_line.setPen(pg.mkPen("#49473F" if enabled else "#F0F7FC", width=1.4))
+        self.cursor_line.set_color("#49473F" if enabled else "#F0F7FC")
         self.cam_pts.setBrush(pg.mkBrush(accents["camera"]))
         self.mini_pts.setBrush(pg.mkBrush(accents["mini"]))
         self.gap_pts.setPen(pg.mkPen(accents["gap"], width=1.8))
@@ -2026,7 +2066,7 @@ class Viewer(QMainWindow):
             axis.setPen(pg.mkPen("#C5BEB1" if enabled else "#315067"))
             axis.setTextPen(pg.mkPen("#625E55" if enabled else "#C8D7E3"))
         self.calcium_curve.setPen(pg.mkPen(accents["mini"], width=1.5))
-        self.calcium_cursor.setPen(pg.mkPen("#49473F" if enabled else "#F0F7FC", width=1.4))
+        self.calcium_cursor.set_color("#49473F" if enabled else "#F0F7FC")
         self.theme_changed.emit(enabled)
 
     def theme_icon(self):
