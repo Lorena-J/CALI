@@ -43,14 +43,14 @@ class FrameSliderTests(unittest.TestCase):
         self.assertTrue(self.v.frame_slider.isEnabled())
         self.assertEqual((self.v.frame_slider.minimum(), self.v.frame_slider.maximum()), (0, 3))
         self.assertEqual(self.v.frame_slider.value(), 0)
-        self.assertEqual(self.v.frame_label.text(), "Mini2P frame 1 · 1/4")
+        self.assertEqual(self.v.frame_label.text(), "TTL-linked Mini2P frame 1 · 1/4")
 
     def test_moving_slider_selects_frame_and_moves_cursor(self):
         self.load()
         self.v.frame_slider.setValue(2)
         self.assertEqual(self.v.current_t, 31.)
         self.assertEqual(self.v.cursor_line.value(), 31.)
-        self.assertEqual(self.v.frame_label.text(), "Mini2P frame 4 · 3/4")
+        self.assertEqual(self.v.frame_label.text(), "TTL-linked Mini2P frame 4 · 3/4")
         self.assertIn("Frame 4 ", self.v.mini_panel.image.toolTip())
 
     def test_arrows_step_exactly_one_frame_and_stop_at_the_ends(self):
@@ -72,7 +72,7 @@ class FrameSliderTests(unittest.TestCase):
         self.assertEqual(self.v.frame_slider.value(), 3)
         self.v.step_mini(-1)
         self.assertEqual(self.v.frame_slider.value(), 2)
-        self.assertEqual(self.v.frame_label.text(), "Mini2P frame 4 · 3/4")
+        self.assertEqual(self.v.frame_label.text(), "TTL-linked Mini2P frame 4 · 3/4")
 
     def test_trim_limits_frames_like_the_arrow_keys(self):
         self.load()

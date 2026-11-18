@@ -2730,9 +2730,9 @@ class Viewer(QMainWindow):
         self.frame_forward_btn.setEnabled(count > 0 and index < count - 1)
         if count:
             frame = int(self.mini_df.frame.iloc[index])
-self.frame_label.setText(f"TTL-linked Mini2P frame {frame} · {index + 1}/{count}")
+            self.frame_label.setText(f"TTL-linked Mini2P frame {frame} · {index + 1}/{count}")
             # Reserve room for the longest label so the slider doesn't shift while scrubbing.
-            widest = f"Mini2P frame {int(self.mini_df.frame.iloc[:count].max())} · {count}/{count}"
+            widest = f"TTL-linked Mini2P frame {int(self.mini_df.frame.iloc[:count].max())} · {count}/{count}"
             self.frame_label.setMinimumWidth(self.frame_label.fontMetrics().horizontalAdvance(widest))
         else:
             self.frame_label.setText("No Mini2P TTL loaded")
