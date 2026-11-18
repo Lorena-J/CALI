@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   viewer:
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       QT_QPA_PLATFORM: offscreen
