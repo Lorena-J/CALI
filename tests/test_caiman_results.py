@@ -252,7 +252,8 @@ class CalciumViewerTests(unittest.TestCase):
         other = Viewer()
         try:
             other.set_caiman_results(self.path)
-            self.assertEqual(other.calcium_status.text(), "")
+            self.assertIn("TTL coverage 0/6", other.calcium_status.text())
+            self.assertIn("Behavior synchronization is unavailable", other.calcium_status.text())
             self.assertTrue(other.calcium_export.isEnabled())
             x, values = other.calcium_curve.getData()
             np.testing.assert_array_equal(x, np.arange(1, 7))

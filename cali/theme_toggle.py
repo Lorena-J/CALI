@@ -19,6 +19,9 @@ class RadialThemeReveal(QWidget):
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WA_NoSystemBackground)
         self._snapshot = QPixmap()
+        self._layer = QPixmap()
+        self._layer_size = None
+        self._layer_dpr = 0.0
         self._progress = 0.0
         self._animation = QVariantAnimation(self)
         self._animation.setDuration(360)
@@ -43,6 +46,9 @@ class RadialThemeReveal(QWidget):
         self._animation.stop()
         self.hide()
         self._snapshot = QPixmap()
+        self._layer = QPixmap()
+        self._layer_size = None
+        self._layer_dpr = 0.0
 
     def _advance(self, value):
         self._progress = float(value)
@@ -76,16 +82,21 @@ class RadialThemeReveal(QWidget):
                 alpha = fraction ** 2 * (3 - 2 * fraction)
                 mask.setColorAt(min(1.0, distance / outer), QColor(0, 0, 0, round(255 * alpha)))
 
-        # Mask a separate layer so opacity removes only the old snapshot.
-        layer = QPixmap(self.size() * self.devicePixelRatioF())
-        layer.setDevicePixelRatio(self.devicePixelRatioF())
-        layer.fill(Qt.transparent)
-        blend = QPainter(layer)
+        # Reuse the full-window layer; resize or screen-DPI changes recreate it.
+        dpr = self.devicePixelRatioF()
+        pixel_size = self.size() * dpr
+        if self._layer_size != self.size() or self._layer_dpr != dpr:
+            self._layer = QPixmap(pixel_size)
+            self._layer.setDevicePixelRatio(dpr)
+            self._layer_size = self.size()
+            self._layer_dpr = dpr
+        self._layer.fill(Qt.transparent)
+        blend = QPainter(self._layer)
         blend.drawPixmap(self.rect(), self._snapshot)
         blend.setCompositionMode(QPainter.CompositionMode_DestinationIn)
         blend.fillRect(self.rect(), mask)
         blend.end()
-        painter.drawPixmap(0, 0, layer)
+        painter.drawPixmap(0, 0, self._layer)
         painter.end()
 
 
@@ -100,6 +111,9 @@ class LandscapeThemeButton(QPushButton):
         self.setCursor(Qt.PointingHandCursor)
         self._night = 0.0
         self._day_mode = True
+        self._night_scene_cache = QPixmap()
+        self._night_scene_size = None
+        self._night_scene_dpr = 0.0
         self._animation = QVariantAnimation(self)
         self._animation.setDuration(220)
         self._animation.setEasingCurve(QEasingCurve.InOutCubic)
@@ -109,6 +123,21 @@ class LandscapeThemeButton(QPushButton):
     def _animate(self, value):
         self._night = float(value)
         self.update()
+
+    def _night_scene(self):
+        dpr = self.devicePixelRatioF()
+        if self._night_scene_size != self.size() or self._night_scene_dpr != dpr:
+            self._night_scene_cache = QPixmap(round(self.width() * dpr), round(self.height() * dpr))
+            self._night_scene_cache.setDevicePixelRatio(dpr)
+            self._night_scene_cache.fill(Qt.transparent)
+            night_painter = QPainter(self._night_scene_cache)
+            night_painter.setRenderHint(QPainter.Antialiasing)
+            night_painter.scale(self.width() / 100, self.height() / 100)
+            self._mountain(night_painter)
+            night_painter.end()
+            self._night_scene_size = self.size()
+            self._night_scene_dpr = dpr
+        return self._night_scene_cache
 
     def set_day_mode(self, enabled):
         self._day_mode = bool(enabled)
@@ -216,14 +245,7 @@ class LandscapeThemeButton(QPushButton):
         self._beach(painter)
         if self._night > 0:
             # Composite the opaque night scene as a whole to avoid layer ghosts.
-            scene = QPixmap(round(self.width() * self.devicePixelRatioF()),
-                            round(self.height() * self.devicePixelRatioF()))
-            scene.fill(Qt.transparent)
-            night_painter = QPainter(scene)
-            night_painter.setRenderHint(QPainter.Antialiasing)
-            night_painter.scale(scene.width() / 100, scene.height() / 100)
-            self._mountain(night_painter)
-            night_painter.end()
+            scene = self._night_scene()
             painter.setOpacity(self._night)
             painter.drawPixmap(QRectF(0, 0, 100, 100), scene, QRectF(scene.rect()))
         painter.restore()

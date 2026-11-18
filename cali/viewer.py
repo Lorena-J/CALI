@@ -23,6 +23,15 @@ from PySide6.QtWidgets import (
     QSizePolicy, QTabWidget, QCheckBox, QSlider, QScrollArea
 )
 
+# Layout sizes in pixels. Change them here instead of in the code below.
+SIDEBAR_WIDTH = 350
+VIEWER_GAP = 14              # space between the Behavior camera and Mini2P viewers
+CAMERA_HEADER_HEIGHT = 46    # title row above each viewer
+CAMERA_HEADER_GAP = 8       # space between that title row and its image
+WORKSPACE_SPACING = 13      # space between the viewers and the Timeline
+TIMELINE_MIN_HEIGHT = 250
+TIMELINE_CHROME_HEIGHT = 110  # tab bar, title and margins around a Timeline page
+
 
 def load_csv(path, label):
     df = pd.read_csv(path).copy()
@@ -478,14 +487,28 @@ class ImagePanel(QFrame):
         header_widget = QWidget()
         self.header_widget = header_widget
         header_widget.setLayout(header)
+        header_widget.setFixedHeight(CAMERA_HEADER_HEIGHT)
         header.setContentsMargins(0, 0, 0, 0)
+        for index in range(header.count()):
+            widget = header.itemAt(index).widget()
+            if widget is not None:
+                header.setAlignment(widget, Qt.AlignVCenter)
         lay = QGridLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
         lay.addWidget(self.image, 0, 0)
+        self.container = QWidget()
+        container_layout = QVBoxLayout(self.container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(CAMERA_HEADER_GAP)
+        container_layout.addWidget(self.header_widget)
+        container_layout.addWidget(self, 1)
         self.pm = None
         self.roi_path = None
         self.roi_shape = None
+
+    def add_header_widget(self, widget):
+        self.header_layout.insertWidget(self.header_layout.count() - 1, widget)
 
     def set_roi(self, footprint):
         self.roi_path = None
@@ -1264,6 +1287,7 @@ class Viewer(QMainWindow):
         self.camera_virtual = None
         self.t0 = None
         self.current_t = 0.0
+        self._alignment_pending = False
         self.video = VideoReader()
         self.tiff = TiffReader()
         self.tiff_first_frame = 1
@@ -1277,7 +1301,14 @@ class Viewer(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if hasattr(self, "viewer_splitter"):
-            QTimer.singleShot(0, self.align_workspace_panels)
+            self.schedule_alignment()
+
+    def schedule_alignment(self):
+        """Queue one alignment, cancelled automatically if this window is deleted."""
+        if self._alignment_pending:
+            return
+        self._alignment_pending = True
+        QTimer.singleShot(0, self, self.align_workspace_panels)
 
     def align_workspace_panels(self):
         self._alignment_pending = False
@@ -1286,23 +1317,60 @@ class Viewer(QMainWindow):
         video_top = self.viewer_splitter.mapTo(root, QPoint()).y()
         navigate_top = self.navigate_card.mapTo(root, QPoint()).y()
         navigate_top += self.sidebar_scroll.verticalScrollBar().value()
-        spacing = 13
+        spacing = WORKSPACE_SPACING
         available_bottom = root.height() - root.layout().contentsMargins().bottom()
-        timeline_minimum = max(250, self.timeline_tabs.currentWidget().minimumSizeHint().height() + 110)
+        timeline_minimum = max(TIMELINE_MIN_HEIGHT, self.timeline_tabs.currentWidget().minimumSizeHint().height() + TIMELINE_CHROME_HEIGHT)
         maximum = available_bottom - video_top - spacing - timeline_minimum
         desired = navigate_top - video_top - spacing
-        height = max(160 if self.timeline_tabs.currentIndex() == 1 else 240, min(desired, maximum))
+        minimum = self.viewer_splitter.minimumSizeHint().height()
+        height = max(minimum, min(desired, maximum))
         if self.viewer_splitter.height() != height:
             self.viewer_splitter.setFixedHeight(height)
 
     def eventFilter(self, watched, event):
+        if event.type() == QEvent.KeyPress and hasattr(self, "sidebar_scroll"):
+            focus = QApplication.focusWidget()
+            widget = focus
+            in_sidebar = False
+            while widget is not None:
+                if widget is self.sidebar_scroll:
+                    in_sidebar = True
+                    break
+                widget = widget.parentWidget()
+            if in_sidebar:
+                actions = {
+                    Qt.Key_Left: lambda: self.step_mini(-1),
+                    Qt.Key_Right: lambda: self.step_mini(1),
+                    Qt.Key_PageUp: lambda: self.jump_gap(-1),
+                    Qt.Key_PageDown: lambda: self.jump_gap(1),
+                }
+                action = actions.get(event.key())
+                if action is not None:
+                    action()
+                    return True
         if (watched is getattr(self, "navigate_card", None)
                 and event.type() in (QEvent.Move, QEvent.Resize)
                 and hasattr(self, "timeline_card")):
-            if not getattr(self, "_alignment_pending", False):
-                self._alignment_pending = True
-                QTimer.singleShot(0, self.align_workspace_panels)
+            self.schedule_alignment()
         return super().eventFilter(watched, event)
+
+    def sidebar_tabs(self, object_name, tabs, make_button):
+        tab_widget = QTabWidget()
+        tab_widget.setObjectName(object_name)
+        tab_widget.setProperty("sidebarTabs", True)
+        tab_widget.setUsesScrollButtons(False)
+        tab_widget.tabBar().setCursor(Qt.PointingHandCursor)
+        tab_widget.tabBar().setElideMode(Qt.ElideNone)
+        for title, entries in tabs:
+            page = QWidget()
+            page_layout = QVBoxLayout(page)
+            page_layout.setContentsMargins(10, 14, 10, 10)
+            page_layout.setSpacing(7)
+            for entry in entries:
+                page_layout.addWidget(make_button(entry))
+            page_layout.addStretch()
+            tab_widget.addTab(page, title)
+        return tab_widget
 
     def build_ui(self):
         self.setStyleSheet(self.app_stylesheet())
@@ -1313,7 +1381,7 @@ class Viewer(QMainWindow):
 
         outer = QHBoxLayout(root)
         outer.setContentsMargins(16, 16, 16, 16)
-        outer.setSpacing(14)
+        outer.setSpacing(VIEWER_GAP)
 
         # ----------------------------------------------------------
         # Sidebar
@@ -1344,44 +1412,28 @@ class Viewer(QMainWindow):
         src_lay.setContentsMargins(13, 12, 13, 12)
         src_lay.setSpacing(9)
 
-        self.file_tabs = QTabWidget()
-        self.file_tabs.setObjectName("fileTabs")
-        self.file_tabs.setProperty("sidebarTabs", True)
-        self.file_tabs.setUsesScrollButtons(False)
-        self.file_tabs.tabBar().setCursor(Qt.PointingHandCursor)
-        self.file_tabs.tabBar().setElideMode(Qt.ElideNone)
         self.source_buttons = {}
-        for title, buttons in (
+        file_tabs = (
             ("Load Files", (
-                ("Load behaviour timestamps", self.load_camera),
-                ("Load Mini2P timestamps", self.load_mini),
-                ("Behavior MP4", self.load_video),
-                ("ScanImage TIFF", self.load_tiff),
+                ("Camera CSV", "Load behavior timestamps", self.load_camera),
+                ("Mini2P CSV", "Load Mini2P timestamps", self.load_mini),
+                ("Behavior MP4", "Behavior MP4", self.load_video),
+                ("ScanImage TIFF", "ScanImage TIFF", self.load_tiff),
             )),
-            ("Load Processed Data", (("CaImAn HDF5", self.load_caiman),)),
-        ):
-            page = QWidget()
-            page_layout = QVBoxLayout(page)
-            page_layout.setContentsMargins(10, 14, 10, 10)
-            page_layout.setSpacing(7)
-            for label, fn in buttons:
-                btn = QPushButton(label)
-                btn.setProperty("variant", "source")
-                btn.setCursor(Qt.PointingHandCursor)
-                btn.clicked.connect(fn)
-                page_layout.addWidget(btn)
-                self.source_buttons[label] = btn
-            page_layout.addStretch()
-            self.file_tabs.addTab(page, title)
+            ("Load Processed Data", (("CaImAn HDF5", "CaImAn HDF5", self.load_caiman),)),
+        )
+        def make_source_button(entry):
+            key, label, callback = entry
+            button = QPushButton(label)
+            button.setProperty("variant", "source")
+            button.setCursor(Qt.PointingHandCursor)
+            button.clicked.connect(callback)
+            self.source_buttons[key] = button
+            return button
+        self.file_tabs = self.sidebar_tabs("fileTabs", file_tabs, make_source_button)
         src_lay.addWidget(self.file_tabs)
 
-        self.analysis_tabs = QTabWidget()
-        self.analysis_tabs.setObjectName("analysisTabs")
-        self.analysis_tabs.setProperty("sidebarTabs", True)
-        self.analysis_tabs.setUsesScrollButtons(False)
-        self.analysis_tabs.tabBar().setCursor(Qt.PointingHandCursor)
-        self.analysis_tabs.tabBar().setElideMode(Qt.ElideNone)
-        for title, actions in (
+        analysis_tabs = (
             ("Tracking", (
                 ("align_tracking_btn", "Align tracking", "camera", self.open_tracking_alignment),
             )),
@@ -1389,21 +1441,17 @@ class Viewer(QMainWindow):
                 ("movement_btn", "Movement analysis", "mini", self.open_movement_analysis),
                 ("processing_button", "Calcium analysis", "gap", self.open_calcium_processing),
             )),
-        ):
-            page = QWidget()
-            page_layout = QVBoxLayout(page)
-            page_layout.setContentsMargins(10, 14, 10, 10)
-            page_layout.setSpacing(7)
-            for attr, label, role, callback in actions:
-                button = QPushButton(label)
-                button.setProperty("variant", "mainGhost")
-                button.setProperty("accentRole", role)
-                button.setCursor(Qt.PointingHandCursor)
-                button.clicked.connect(callback)
-                page_layout.addWidget(button)
-                setattr(self, attr, button)
-            page_layout.addStretch()
-            self.analysis_tabs.addTab(page, title)
+        )
+        def make_analysis_button(entry):
+            attr, label, role, callback = entry
+            button = QPushButton(label)
+            button.setProperty("variant", "mainGhost")
+            button.setProperty("accentRole", role)
+            button.setCursor(Qt.PointingHandCursor)
+            button.clicked.connect(callback)
+            setattr(self, attr, button)
+            return button
+        self.analysis_tabs = self.sidebar_tabs("analysisTabs", analysis_tabs, make_analysis_button)
         src_lay.addWidget(self.analysis_tabs)
         side.addWidget(src_card)
 
@@ -1479,16 +1527,17 @@ class Viewer(QMainWindow):
         self.sidebar_scroll.setFrameShape(QFrame.NoFrame)
         self.sidebar_scroll.setWidgetResizable(True)
         self.sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.sidebar_scroll.setFixedWidth(350)
+        self.sidebar_scroll.setFixedWidth(SIDEBAR_WIDTH)
         self.sidebar_scroll.setStyleSheet("QScrollArea#sidebarScroll { background: transparent; }")
         self.sidebar_scroll.setWidget(sidebar)
         outer.addWidget(self.sidebar_scroll)
+        QApplication.instance().installEventFilter(self)
 
         # ----------------------------------------------------------
         # Main workspace
         # ----------------------------------------------------------
         main = QVBoxLayout()
-        main.setSpacing(13)
+        main.setSpacing(WORKSPACE_SPACING)
 
         self.theme_btn = LandscapeThemeButton()
         self.theme_btn.clicked.connect(lambda: self.set_day_mode(not self.day_mode))
@@ -1496,32 +1545,21 @@ class Viewer(QMainWindow):
         split = QSplitter(Qt.Horizontal)
         self.viewer_splitter = split
         split.setObjectName("viewerSplitter")
-        split.setHandleWidth(14)
+        split.setHandleWidth(VIEWER_GAP)
         accents = self.accent_palette()
         self.cam_panel = ImagePanel("Behavior camera", accents["camera"], croppable=True)
         self.cam_panel.cropChanged.connect(self.set_spatial_crop)
         self.cam_panel.exportCropRequested.connect(self.export_spatial_crop)
         self.mini_panel = ImagePanel("Mini2P", accents["mini"])
-        self.mini_panel.header_layout.addWidget(self.theme_btn)
+        self.mini_panel.add_header_widget(self.theme_btn)
         for panel in (self.cam_panel, self.mini_panel):
-            panel.header_widget.setFixedHeight(46)
-            for i in range(panel.header_layout.count()):
-                widget = panel.header_layout.itemAt(i).widget()
-                if widget is not None:
-                    panel.header_layout.setAlignment(widget, Qt.AlignVCenter)
-            column = QWidget()
-            column_layout = QVBoxLayout(column)
-            column_layout.setContentsMargins(0, 0, 0, 0)
-            column_layout.setSpacing(8)
-            column_layout.addWidget(panel.header_widget)
-            column_layout.addWidget(panel, 1)
-            split.addWidget(column)
+            split.addWidget(panel.container)
         split.setSizes([720, 720])
         main.addWidget(split, 1)
 
         timeline_card = self.card("timelineCard")
         self.timeline_card = timeline_card
-        timeline_card.setMinimumHeight(250)
+        timeline_card.setMinimumHeight(TIMELINE_MIN_HEIGHT)
         timeline_lay = QVBoxLayout(timeline_card)
         timeline_lay.setContentsMargins(15, 13, 15, 12)
         timeline_lay.setSpacing(8)
@@ -1593,7 +1631,7 @@ class Viewer(QMainWindow):
         self.plot.scene().sigMouseMoved.connect(self.mouse_moved)
         self.timeline_tabs = QTabWidget()
         self.timeline_tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
-        self.timeline_tabs.currentChanged.connect(lambda _: QTimer.singleShot(0, self.align_workspace_panels))
+        self.timeline_tabs.currentChanged.connect(lambda _: self.schedule_alignment())
         self.timeline_tabs.addTab(self.plot, "Timing")
         self.build_calcium_tab()
         self.timeline_tabs.currentChanged.connect(self.calcium_tab_changed)
@@ -1643,7 +1681,7 @@ class Viewer(QMainWindow):
 
         main.addWidget(timeline_card, 1)
         outer.addLayout(main, 1)
-        QTimer.singleShot(0, self.align_workspace_panels)
+        self.schedule_alignment()
         self.set_day_mode(self.day_mode)
 
     def build_calcium_tab(self):
@@ -2035,6 +2073,10 @@ class Viewer(QMainWindow):
             if not previous_mode:
                 self.calcium_plot.setXRange(frames[0], frames[-1], padding=.01)
             notes = ""
+            ttl_covered = np.isfinite(self.calcium_sample_times())
+            if not ttl_covered.all():
+                notes = (f"TTL coverage {int(ttl_covered.sum())}/{len(ttl_covered)}. "
+                         "Behavior synchronization is unavailable for frames without measured TTL times.")
             self.calcium_export.setToolTip("Exports movie samples with empty time_ms outside measured TTL coverage. The current trim limits exported samples.")
         else:
             self.calcium_curve.setData(table.time_ms.to_numpy(), table.value.to_numpy(), connect="finite")
@@ -2053,8 +2095,9 @@ class Viewer(QMainWindow):
             shape = (self.mini_panel.pm.height(), self.mini_panel.pm.width())
             if shape != self.caiman.dims:
                 notes += " ROI hidden: TIFF and CaImAn image dimensions differ."
-        self.calcium_status.setText(prefix + notes)
-        self.calcium_status.setVisible(bool((prefix + notes).strip()))
+        status_text = (prefix + notes).strip()
+        self.calcium_status.setText(status_text)
+        self.calcium_status.setVisible(bool(status_text))
         self.calcium_export.setEnabled(bool(covered.any()))
 
     def export_calcium_trace(self):
@@ -2411,7 +2454,6 @@ class Viewer(QMainWindow):
         }
         QSplitter::handle {
             background: transparent;
-            width: 14px;
         }
         """
         if self.day_mode:
@@ -2723,7 +2765,7 @@ class Viewer(QMainWindow):
             self.camera_csv_path = Path(p)
             self.clear_trim()
             self.rebuild()
-            self.mark_loaded("Load behaviour timestamps", True)
+            self.mark_loaded("Camera CSV", True)
             self.update_file_state()
         except Exception as e:
             self.err(e)
@@ -2736,7 +2778,7 @@ class Viewer(QMainWindow):
             self.mini_df = load_csv(p, "Mini2P")
             self.mini_csv_path = Path(p)
             self.rebuild()
-            self.mark_loaded("Load Mini2P timestamps", True)
+            self.mark_loaded("Mini2P CSV", True)
             self.update_file_state()
         except Exception as e:
             self.err(e)
