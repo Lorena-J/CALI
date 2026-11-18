@@ -1469,6 +1469,11 @@ class Viewer(QMainWindow):
         timeline_lay.addWidget(self.timeline_tabs)
 
         # Mini2P frame slider ----------------------------------------
+        # The slider gets its own row so it can span exactly the time axis
+        # (see align_frame_slider); the step buttons and label sit below it.
+        self.frame_slider_track = QWidget()
+        track_lay = QHBoxLayout(self.frame_slider_track)
+        track_lay.setContentsMargins(0, 0, 0, 0)
         frame_row = QHBoxLayout()
         frame_row.setSpacing(7)
         self.frame_back_btn = QPushButton("‹")
@@ -1491,11 +1496,16 @@ class Viewer(QMainWindow):
         self.frame_label = QLabel()
         self.frame_label.setObjectName("frameSliderLabel")
         self.frame_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        frame_row.addWidget(self.frame_back_btn)
-        frame_row.addWidget(self.frame_slider, 1)
-        frame_row.addWidget(self.frame_forward_btn)
+        track_lay.addWidget(self.frame_slider)
+        frame_row.addStretch(1)
         frame_row.addWidget(self.frame_label)
+        frame_row.addWidget(self.frame_back_btn)
+        frame_row.addWidget(self.frame_forward_btn)
+        timeline_lay.addWidget(self.frame_slider_track)
         timeline_lay.addLayout(frame_row)
+        for plot in (self.plot, self.calcium_plot):
+            plot.getViewBox().sigResized.connect(self.schedule_frame_slider_alignment)
+        self.timeline_tabs.currentChanged.connect(self.schedule_frame_slider_alignment)
         self.sync_frame_slider()
 
         # Trim toolbar ----------------------------------------------
@@ -2502,9 +2512,6 @@ class Viewer(QMainWindow):
                     background: #193347; color: #EAF5FA; border-color: #315067;
                 }
                 QCheckBox::indicator:unchecked { background: #14283A; border-color: #728596; }
-                QSlider::groove:horizontal { background: #213B4F; height: 6px; border-radius: 3px; }
-                QSlider::sub-page:horizontal { border-radius: 3px; }
-                QSlider::handle:horizontal { width: 14px; margin: -5px 0; border: 1px solid; border-radius: 4px; }
                 QSlider::handle:horizontal:disabled { background: #2B465B; border-color: #2B465B; }
             """
         accents = self.accent_palette()
@@ -2549,8 +2556,15 @@ class Viewer(QMainWindow):
             QTabBar::tab {{ background: {accents['soft']}; color: {accents['muted']}; }}
             QTabBar::tab:selected {{ background: {accents['tint']}; color: {accents['tint_text']}; }}
             QCheckBox::indicator:checked {{ background: {accents['secondary']}; border-color: {accents['secondary']}; }}
-            QSlider::sub-page:horizontal {{ background: {accents['camera']}; }}
-            QSlider::handle:horizontal {{ background: {accents['camera']}; border-color: {accents['primary_hover']}; }}
+            QSlider::groove:horizontal {{
+                background: {"#C5BEB1" if self.day_mode else "#315067"}; height: 4px; border-radius: 2px;
+            }}
+            QSlider::sub-page:horizontal {{ background: {accents['camera']}; border-radius: 2px; }}
+            QSlider::handle:horizontal {{
+                background: {accents['camera']}; border: 1px solid {accents['primary_hover']};
+                width: 14px; margin: -6px 0; border-radius: 4px;
+            }}
+            QLabel#frameSliderLabel {{ color: {"#625E55" if self.day_mode else "#C8D7E3"}; }}
         """
         for role, background, text in (
             ("camera", accents["tint"], accents["tint_text"]),
@@ -2722,6 +2736,24 @@ class Viewer(QMainWindow):
             self.frame_label.setMinimumWidth(self.frame_label.fontMetrics().horizontalAdvance(widest))
         else:
             self.frame_label.setText("No Mini2P TTL loaded")
+
+    def schedule_frame_slider_alignment(self, *_):
+        # Wait for the layout pass so the axis and the slider row have their new sizes.
+        QTimer.singleShot(0, self.align_frame_slider)
+
+    def align_frame_slider(self):
+        """Make the slider groove span exactly the x axis of the visible timeline plot."""
+        plot = self.calcium_plot if self.timeline_tabs.currentIndex() == 1 else self.plot
+        track = self.frame_slider_track
+        if not plot.isVisible() or not track.isVisible():
+            return
+        rect = plot.getViewBox().sceneBoundingRect()
+        viewport = plot.viewport()
+        left, right = (
+            track.mapFromGlobal(viewport.mapToGlobal(plot.mapFromScene(point))).x()
+            for point in (rect.topLeft(), rect.topRight())
+        )
+        track.layout().setContentsMargins(max(left, 0), 0, max(track.width() - right, 0), 0)
 
     def frame_slider_moved(self, index):
         mini_t, _ = self.visible_timeline_times()
