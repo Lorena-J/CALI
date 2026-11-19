@@ -211,6 +211,19 @@ class TiffReader:
         self.cache.clear()
 
 
+def frame_tick_symbol():
+    """Vertical line one symbol unit tall, centred on the point."""
+    path = QPainterPath()
+    path.moveTo(0, -0.5)
+    path.lineTo(0, 0.5)
+    return path
+
+
+FRAME_TICK_SYMBOL = frame_tick_symbol()
+FRAME_TICK_HEIGHT = 14  # px; rows are one y unit (~70 px) apart, so ticks stay short
+FRAME_TICK_WIDTH = 1.4  # px
+
+
 class CropImageLabel(QLabel):
     cropSelected = Signal(object)
 
@@ -1426,15 +1439,19 @@ class Viewer(QMainWindow):
             axis.setPen(pg.mkPen("#315067"))
             axis.setTextPen(pg.mkPen("#C8D7E3"))
 
+        # One short vertical tick per frame, centred on its series row. Symbol
+        # sizes are in screen pixels, so ticks keep the same height at any zoom.
         self.cam_pts = pg.ScatterPlotItem(
-            size=5,
-            pen=None,
-            brush=pg.mkBrush(23, 185, 220, 225),
+            size=FRAME_TICK_HEIGHT,
+            symbol=FRAME_TICK_SYMBOL,
+            pen=pg.mkPen(23, 185, 220, 225, width=FRAME_TICK_WIDTH),
+            brush=None,
         )
         self.mini_pts = pg.ScatterPlotItem(
-            size=6,
-            pen=None,
-            brush=pg.mkBrush(18, 196, 190, 235),
+            size=FRAME_TICK_HEIGHT,
+            symbol=FRAME_TICK_SYMBOL,
+            pen=pg.mkPen(18, 196, 190, 235, width=FRAME_TICK_WIDTH),
+            brush=None,
         )
         self.gap_pts = pg.ScatterPlotItem(
             size=10,
@@ -2017,8 +2034,8 @@ class Viewer(QMainWindow):
             axis.setPen(pg.mkPen("#C5BEB1" if enabled else "#315067"))
             axis.setTextPen(pg.mkPen("#625E55" if enabled else "#C8D7E3"))
         self.cursor_line.setPen(pg.mkPen("#49473F" if enabled else "#F0F7FC", width=1.4))
-        self.cam_pts.setBrush(pg.mkBrush(accents["camera"]))
-        self.mini_pts.setBrush(pg.mkBrush(accents["mini"]))
+        self.cam_pts.setPen(pg.mkPen(accents["camera"], width=FRAME_TICK_WIDTH))
+        self.mini_pts.setPen(pg.mkPen(accents["mini"], width=FRAME_TICK_WIDTH))
         self.gap_pts.setPen(pg.mkPen(accents["gap"], width=1.8))
         self.calcium_plot.setBackground("#F8F5EE" if enabled else "#0C1927")
         for axis_name in ("bottom", "left"):
