@@ -47,7 +47,7 @@ behavior only where a measured Mini2P TTL is available.
 
 ## Align existing tracking
 
-Open **Align tracking** in the Timeline header. Load a flat CSV or a DeepLabCut
+Open **Align tracking** in the sidebar's **Tracking** tab. Load a flat CSV or a DeepLabCut
 CSV with its three header rows, choose one numeric coordinate (typically X),
 and choose camera times or one sample per Mini2P frame.
 
