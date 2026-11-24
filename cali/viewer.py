@@ -48,6 +48,23 @@ FRAME_TICK_HEIGHT = 14  # px; rows are one y unit (~70 px) apart, so ticks stay 
 FRAME_TICK_WIDTH = 1.4  # px
 
 
+class FrameSlider(QSlider):
+    """Mini2P frame slider that leaves CALI's navigation keys to the window.
+
+    Left/Right and PageUp/PageDown already step frames and jump gaps anywhere
+    in the viewer, so the slider passes them on instead of moving by itself.
+    Home/End still jump to the first/last frame.
+    """
+
+    NAVIGATION_KEYS = (Qt.Key_Left, Qt.Key_Right, Qt.Key_PageUp, Qt.Key_PageDown)
+
+    def keyPressEvent(self, event):
+        if event.key() in self.NAVIGATION_KEYS:
+            event.ignore()
+            return
+        super().keyPressEvent(event)
+
+
 class TimelineCursor(pg.InfiniteLine):
     """Vertical plot cursor with a wider mouse target and hover feedback."""
 
@@ -287,7 +304,8 @@ class Viewer(QMainWindow):
         src_lay.addWidget(self.analysis_tabs)
         side.addWidget(src_card)
 
-        # Navigate --------------------------------------------------
+        # Video mapping ---------------------------------------------
+        # Frame navigation lives under the Timeline (frame slider row).
         controls_card = self.card("sideCard")
         self.navigate_card = controls_card
         controls_card.installEventFilter(self)
@@ -296,39 +314,10 @@ class Viewer(QMainWindow):
         controls_lay.setContentsMargins(13, 12, 13, 12)
         controls_lay.setSpacing(10)
 
-        controls_title = QLabel("Navigate")
+        controls_title = QLabel("Video mapping")
         self.navigate_title = controls_title
         controls_title.setObjectName("sectionTitle")
         controls_lay.addWidget(controls_title)
-
-        for label_text, back_fn, forward_fn in (
-            ("Frame", lambda: self.step_mini(-1), lambda: self.step_mini(1)),
-            ("Gap", lambda: self.jump_gap(-1), lambda: self.jump_gap(1)),
-        ):
-            row = QHBoxLayout()
-            row.setSpacing(6)
-            row_label = QLabel(label_text)
-            row_label.setObjectName("navRowLabel")
-            row.addWidget(row_label)
-            row.addStretch()
-            back = QPushButton("‹")
-            forward = QPushButton("›")
-            for button, fn in ((back, back_fn), (forward, forward_fn)):
-                button.setProperty("variant", "navStep")
-                button.setFixedSize(38, 34)
-                button.setCursor(Qt.PointingHandCursor)
-                button.clicked.connect(fn)
-                row.addWidget(button)
-            controls_lay.addLayout(row)
-
-        nav_sep = QFrame()
-        nav_sep.setObjectName("sideSeparator")
-        nav_sep.setFixedHeight(1)
-        controls_lay.addWidget(nav_sep)
-
-        mapping_header = QLabel("Video mapping")
-        mapping_header.setObjectName("navSubhead")
-        controls_lay.addWidget(mapping_header)
 
         self.mode = QComboBox()
         self.mode.setObjectName("videoMapping")
@@ -472,6 +461,46 @@ class Viewer(QMainWindow):
         self.build_calcium_tab()
         self.timeline_tabs.currentChanged.connect(self.calcium_tab_changed)
         timeline_lay.addWidget(self.timeline_tabs, 1)
+
+        # Mini2P frame slider ----------------------------------------
+        # The slider gets its own row so it can span exactly the time axis
+        # (see align_frame_slider); the step buttons and label sit below it.
+        self.frame_slider_track = QWidget()
+        track_lay = QHBoxLayout(self.frame_slider_track)
+        track_lay.setContentsMargins(0, 0, 0, 0)
+        frame_row = QHBoxLayout()
+        frame_row.setSpacing(7)
+        self.frame_back_btn = QPushButton("‹")
+        self.frame_forward_btn = QPushButton("›")
+        for button, step, name in (
+            (self.frame_back_btn, -1, "Previous Mini2P frame"),
+            (self.frame_forward_btn, 1, "Next Mini2P frame"),
+        ):
+            button.setProperty("variant", "navStep")
+            button.setFixedSize(38, 34)
+            button.setCursor(Qt.PointingHandCursor)
+            button.setToolTip(name)
+            button.setAccessibleName(name)
+            button.clicked.connect(lambda _=False, step=step: self.step_frame_slider(step))
+        self.frame_slider = FrameSlider(Qt.Horizontal)
+        self.frame_slider.setObjectName("frameSlider")
+        self.frame_slider.setAccessibleName("Mini2P frame")
+        self.frame_slider.setCursor(Qt.PointingHandCursor)
+        self.frame_slider.valueChanged.connect(self.frame_slider_moved)
+        self.frame_label = QLabel()
+        self.frame_label.setObjectName("frameSliderLabel")
+        self.frame_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        track_lay.addWidget(self.frame_slider)
+        frame_row.addStretch(1)
+        frame_row.addWidget(self.frame_label)
+        frame_row.addWidget(self.frame_back_btn)
+        frame_row.addWidget(self.frame_forward_btn)
+        timeline_lay.addWidget(self.frame_slider_track)
+        timeline_lay.addLayout(frame_row)
+        for plot in (self.plot, self.calcium_plot):
+            plot.getViewBox().sigResized.connect(self.schedule_frame_slider_alignment)
+        self.timeline_tabs.currentChanged.connect(self.schedule_frame_slider_alignment)
+        self.sync_frame_slider()
 
         # Trim toolbar ----------------------------------------------
         trim_sep = QFrame()
@@ -1130,9 +1159,62 @@ class Viewer(QMainWindow):
             self.plot.setXRange(lo - m, hi + m, padding=0)
         self.update_trim_visual()
         self.refresh_calcium_trace()
+        self.sync_frame_slider()
 
     def nearest(self, a, t):
         return None if a is None or len(a) == 0 else int(np.argmin(np.abs(a - t)))
+
+    def sync_frame_slider(self):
+        """Match the frame slider to the visible Mini2P frames and the cursor.
+
+        The slider covers the same frames as the Left/Right keys: the loaded
+        Mini2P TTL frames, cut at the trim point if one is set.
+        """
+        mini_t, _ = self.visible_timeline_times()
+        count = 0 if mini_t is None else len(mini_t)
+        index = self.nearest(mini_t, self.current_t) if count else 0
+        self.frame_slider.blockSignals(True)
+        self.frame_slider.setRange(0, max(count - 1, 0))
+        self.frame_slider.setValue(index)
+        self.frame_slider.blockSignals(False)
+        self.frame_slider.setEnabled(count > 0)
+        self.frame_back_btn.setEnabled(count > 0 and index > 0)
+        self.frame_forward_btn.setEnabled(count > 0 and index < count - 1)
+        if count:
+            frame = int(self.mini_df.frame.iloc[index])
+            self.frame_label.setText(f"TTL-linked Mini2P frame {frame} · {index + 1}/{count}")
+            # Reserve room for the longest label so the slider doesn't shift while scrubbing.
+            widest = f"TTL-linked Mini2P frame {int(self.mini_df.frame.iloc[:count].max())} · {count}/{count}"
+            self.frame_label.setMinimumWidth(self.frame_label.fontMetrics().horizontalAdvance(widest))
+        else:
+            self.frame_label.setText("No Mini2P TTL loaded")
+
+    def schedule_frame_slider_alignment(self, *_):
+        # Wait for the layout pass so the axis and the slider row have their new sizes.
+        QTimer.singleShot(0, self, self.align_frame_slider)
+
+    def align_frame_slider(self):
+        """Make the slider groove span exactly the x axis of the visible timeline plot."""
+        plot = self.calcium_plot if self.timeline_tabs.currentIndex() == 1 else self.plot
+        track = self.frame_slider_track
+        if not plot.isVisible() or not track.isVisible():
+            return
+        rect = plot.getViewBox().sceneBoundingRect()
+        viewport = plot.viewport()
+        left, right = (
+            track.mapFromGlobal(viewport.mapToGlobal(plot.mapFromScene(point))).x()
+            for point in (rect.topLeft(), rect.topRight())
+        )
+        track.layout().setContentsMargins(max(left, 0), 0, max(track.width() - right, 0), 0)
+
+    def frame_slider_moved(self, index):
+        mini_t, _ = self.visible_timeline_times()
+        if mini_t is not None and 0 <= index < len(mini_t):
+            self.set_time(float(mini_t[index]))
+
+    def step_frame_slider(self, step):
+        # setValue() clamps to the first/last frame and then moves the cursor.
+        self.frame_slider.setValue(self.frame_slider.value() + step)
 
     def set_time(self, t):
         self.current_t = float(t)
@@ -1145,6 +1227,7 @@ class Viewer(QMainWindow):
         self.cursor_line.blockSignals(True)
         self.cursor_line.setValue(self.current_t)
         self.cursor_line.blockSignals(False)
+        self.sync_frame_slider()
         self.calcium_cursor.blockSignals(True)
         position = (1 + (self.calcium_sample_index or 0)
                     if self.calcium_movie_mode else self.current_t)

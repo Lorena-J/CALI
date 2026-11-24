@@ -83,17 +83,6 @@ def app_stylesheet(day_mode):
         font-weight: 650;
         background: transparent;
     }
-    QLabel#navSubhead {
-        color: #7FDCE9;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        background: transparent;
-    }
-    QFrame#sideSeparator {
-        background: #27485D;
-        border: none;
-    }
     QLabel#subtleText, QLabel#sidebarBody {
         color: #91A6B7;
         background: transparent;
@@ -305,8 +294,7 @@ def app_stylesheet(day_mode):
             color: #575C54;
         }
         QLabel#subtleText, QLabel#sidebarBody { color: #686B61; }
-        QLabel#navSubhead { color: #287B77; }
-        QFrame#sideSeparator, QFrame#trimSeparator { background: #DCD5C8; }
+        QFrame#trimSeparator { background: #DCD5C8; }
         QLabel#imageCanvas {
             background: #EDE8DE;
             color: #737469;
@@ -450,7 +438,7 @@ def app_stylesheet(day_mode):
                 background: #193347; color: #EAF5FA; border-color: #315067;
             }
             QCheckBox::indicator:unchecked { background: #14283A; border-color: #728596; }
-            QSlider::groove:horizontal { background: #213B4F; }
+            QSlider::handle:horizontal:disabled { background: #2B465B; border-color: #2B465B; }
         """
     accents = accent_palette(day_mode)
     stylesheet += f"""
@@ -459,7 +447,6 @@ def app_stylesheet(day_mode):
             background: {"rgba(250, 247, 240, 225)" if day_mode else "rgba(20, 40, 58, 225)"};
             border-radius: 5px; padding: 3px 6px;
         }}
-        QLabel#navSubhead {{ color: {accents['mini_text']}; }}
         QLabel#trimStatusPill {{
             background: {accents['tint']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
         }}
@@ -540,8 +527,15 @@ def app_stylesheet(day_mode):
             padding-top: 7px;
         }}
         QCheckBox::indicator:checked {{ background: {accents['secondary']}; border-color: {accents['secondary']}; }}
-        QSlider::sub-page:horizontal {{ background: {accents['primary']}; }}
-        QSlider::handle:horizontal {{ background: {accents['primary']}; border-color: {accents['primary_hover']}; }}
+        QSlider::groove:horizontal {{
+            background: {"#C5BEB1" if day_mode else "#315067"}; height: 4px; border-radius: 2px;
+        }}
+        QSlider::sub-page:horizontal {{ background: {accents['camera']}; border-radius: 2px; }}
+        QSlider::handle:horizontal {{
+            background: {accents['camera']}; border: 1px solid {accents['primary_hover']};
+            width: 14px; margin: -6px 0; border-radius: 4px;
+        }}
+        QLabel#frameSliderLabel {{ color: {"#625E55" if day_mode else "#C8D7E3"}; }}
     """
     for role, background, text in (
         ("camera", accents["tint"], accents["tint_text"]),

@@ -98,8 +98,10 @@ movie-frame coordinates.
    and **ScanImage TIFF**.
    Both TTL files must use the same acquisition clock in milliseconds.
 2. Inspect the **Timing** tab. Click the timeline or move its cursor to browse
-   the nearest camera and imaging frames. Left/right arrows step imaging frames;
-   PageUp/PageDown move between detected camera gaps.
+   the nearest camera and imaging frames. The slider below the Timeline moves
+   through the loaded Mini2P frames, and its ‹ › buttons step one frame at a
+   time; it stops at the trim point when one is set. Left/right arrows also step
+   imaging frames; PageUp/PageDown move between detected camera gaps.
 3. Check **Video mapping** and **MP4 offset** against your acquisition. Offset
    is in video frames, not milliseconds; it defaults to zero. Missing camera TTLs
    are reconstructed on load, so verify the mapping against real video frames.
