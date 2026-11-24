@@ -73,12 +73,14 @@ locations and compatibility constraints.
 
 ## What to load
 
-Use the **Files** buttons to select local files:
+Use the sidebar's **Load Files** tab for original data and **Load Processed Data**
+for CaImAn results. Below these, **Tracking** contains **Align tracking**, and
+**Analysis** contains **Movement analysis** and **Calcium analysis**.
 
 | Input | Purpose | Required format |
 | --- | --- | --- |
-| Camera CSV | Behavior-camera timing | CSV with `frame` and `timestamp_ms` |
-| Mini2P CSV | Imaging timing | CSV with `frame` and `timestamp_ms` |
+| Camera CSV (load with **Load behavior timestamps**) | Behavior-camera timing | CSV with `frame` and `timestamp_ms` |
+| Mini2P CSV (load with **Load Mini2P timestamps**) | Imaging timing | CSV with `frame` and `timestamp_ms` |
 | Behavior MP4 | Behavior images | Video corresponding to the camera TTLs |
 | ScanImage TIFF | Imaging images and/or CaImAn processing | TIFF; processing currently supports one plane |
 | CaImAn HDF5 | Existing calcium traces and footprints | `.h5`/`.hdf5` from `cnm.save(...)`; completed CALI runs can also open through their manifest |
@@ -91,7 +93,9 @@ movie-frame coordinates.
 
 ## First synchronized view
 
-1. Load **Camera CSV**, **Mini2P CSV**, **Behavior MP4** and **ScanImage TIFF**.
+1. In **Load Files**, use **Load behavior timestamps** for the Camera CSV and
+   **Load Mini2P timestamps** for the Mini2P CSV. Also load **Behavior MP4**
+   and **ScanImage TIFF**.
    Both TTL files must use the same acquisition clock in milliseconds.
 2. Inspect the **Timing** tab. Click the timeline or move its cursor to browse
    the nearest camera and imaging frames. The slider below the Timeline moves
