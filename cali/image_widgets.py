@@ -3,7 +3,11 @@ import cv2
 import numpy as np
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QRectF
 from PySide6.QtGui import QImage, QPixmap, QPainter, QPainterPath, QPen, QColor
-from PySide6.QtWidgets import QLabel, QFrame, QPushButton, QHBoxLayout, QVBoxLayout, QSizePolicy
+from PySide6.QtWidgets import QLabel, QFrame, QPushButton, QHBoxLayout, QVBoxLayout, QGridLayout, QSizePolicy, QWidget
+
+
+CAMERA_HEADER_HEIGHT = 46
+CAMERA_HEADER_GAP = 8
 
 
 def gray8(frame):
@@ -219,7 +223,6 @@ class ImagePanel(QFrame):
         header.setSpacing(8)
         header.addWidget(dot)
         header.addWidget(title_label)
-        header.addStretch()
 
         if croppable:
             self.crop_btn = QPushButton("Crop")
@@ -252,19 +255,39 @@ class ImagePanel(QFrame):
         else:
             self.image = QLabel("No file loaded")
 
+        header.addStretch()
         self.image.setObjectName("imageCanvas")
         self.image.setAlignment(Qt.AlignCenter)
         self.image.setMinimumHeight(240)
-        self.image.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # The displayed pixmap must not become a new minimum layout size:
+        # resizing it otherwise feeds back into the next layout pass.
+        self.image.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
 
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(15, 14, 15, 13)
-        lay.setSpacing(9)
-        lay.addLayout(header)
-        lay.addWidget(self.image, 1)
+        header_widget = QWidget()
+        self.header_widget = header_widget
+        header_widget.setLayout(header)
+        header_widget.setFixedHeight(CAMERA_HEADER_HEIGHT)
+        header.setContentsMargins(0, 0, 0, 0)
+        for index in range(header.count()):
+            widget = header.itemAt(index).widget()
+            if widget is not None:
+                header.setAlignment(widget, Qt.AlignVCenter)
+        lay = QGridLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        lay.addWidget(self.image, 0, 0)
+        self.container = QWidget()
+        container_layout = QVBoxLayout(self.container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(CAMERA_HEADER_GAP)
+        container_layout.addWidget(self.header_widget)
+        container_layout.addWidget(self, 1)
         self.pm = None
         self.roi_path = None
         self.roi_shape = None
+
+    def add_header_widget(self, widget):
+        self.header_layout.insertWidget(self.header_layout.count() - 1, widget)
 
     def set_roi(self, footprint):
         self.roi_path = None
@@ -343,7 +366,7 @@ class ImagePanel(QFrame):
                 painter.end()
             self.image.setPixmap(
                 display_pm.scaled(
-                    self.image.size(),
+                    self.image.contentsRect().size(),
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation,
                 )

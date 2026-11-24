@@ -28,7 +28,8 @@ platform-complete lock for Conda, system libraries or the CaImAn environment.
 | `cali/viewer.py` | Main window, shared source state, timeline/navigation and calcium browsing; delegates readers, tracking, themes and video encoding. |
 | `cali/timing.py`, `cali/tracking.py` | Qt-free TTL reading/reconstruction and tracking CSV/index/interpolation/alignment functions. |
 | `cali/readers.py` | Video/TIFF readers and bounded frame caches. |
-| `cali/image_widgets.py`, `cali/theme.py` | Image panels, crop/ROI rendering, viewer palettes, styles and theme icons. |
+| `cali/image_widgets.py`, `cali/theme.py` | Image panels, crop/ROI rendering, viewer palettes and styles. |
+| `cali/theme_toggle.py` | Theme selector and visual transition. |
 | `cali/tracking_dialog.py` | Tracking alignment controls, plots and export interaction. |
 | `cali/video_exports.py` | Qt-free prefix/cropped/aligned video encoding and JSON/CSV sidecars; callers provide progress/cancellation callbacks. |
 | `cali/caiman_results.py`, `cali/calcium_pipeline.py`, `cali/processing_dialog.py` | CaImAn result reader, isolated processing worker and processing dialog. |

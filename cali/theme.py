@@ -1,8 +1,8 @@
-"""Viewer palettes, stylesheet and theme icon construction."""
+"""Viewer palettes and stylesheet."""
+
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QRectF, QPointF
-from PySide6.QtGui import QPalette, QColor, QPixmap, QPainter, QPen, QPainterPath, QIcon
+from PySide6.QtGui import QPalette, QColor
 
 
 def accent_palette(day_mode):
@@ -25,37 +25,6 @@ def accent_palette(day_mode):
         "gap_tint": "#452F3D", "gap_text": "#F8A07E",
         "soft": "#302D40", "muted": "#D5C3D6",
     }
-
-
-def theme_icon(day_mode):
-    pixmap = QPixmap(48, 48)
-    pixmap.setDevicePixelRatio(2)
-    pixmap.fill(Qt.transparent)
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.Antialiasing)
-    pen = QPen(QColor("#454D46" if day_mode else "#F3E79B"), 1.7)
-    pen.setCapStyle(Qt.RoundCap)
-    pen.setJoinStyle(Qt.RoundJoin)
-    painter.setPen(pen)
-    if day_mode:
-        moon = QPainterPath()
-        moon.moveTo(20, 14)
-        moon.cubicTo(15, 16, 8, 10, 11, 3)
-        moon.cubicTo(6, 3.5, 3, 7.5, 3, 12)
-        moon.cubicTo(3, 17, 7, 21, 12, 21)
-        moon.cubicTo(15.5, 21, 19, 18.5, 20, 14)
-        painter.drawPath(moon)
-    else:
-        painter.drawEllipse(QRectF(7.5, 7.5, 9, 9))
-        for x1, y1, x2, y2 in (
-            (12, 2, 12, 4), (12, 20, 12, 22),
-            (2, 12, 4, 12), (20, 12, 22, 12),
-            (5, 5, 6.5, 6.5), (17.5, 17.5, 19, 19),
-            (5, 19, 6.5, 17.5), (17.5, 6.5, 19, 5),
-        ):
-            painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
-    painter.end()
-    return QIcon(pixmap)
 
 
 def app_stylesheet(day_mode):
@@ -308,7 +277,6 @@ def app_stylesheet(day_mode):
     }
     QSplitter::handle {
         background: transparent;
-        width: 9px;
     }
     """
     if day_mode:
@@ -395,13 +363,6 @@ def app_stylesheet(day_mode):
             border-color: #C6C0B3;
         }
         """
-    stylesheet += """
-        QPushButton#themeToggle {
-            min-height: 34px;
-            padding: 0;
-            border-radius: 18px;
-        }
-    """
     icon_dir = (Path(__file__).parent / "assets" / "icons").as_posix()
     control_border = "#D2CCBF" if day_mode else "#2C4C62"
     stylesheet += f"""
@@ -494,6 +455,10 @@ def app_stylesheet(day_mode):
     accents = accent_palette(day_mode)
     stylesheet += f"""
         QWidget {{ selection-background-color: {accents['tint']}; selection-color: {accents['tint_text']}; }}
+        QLabel#panelTitle {{
+            background: {"rgba(250, 247, 240, 225)" if day_mode else "rgba(20, 40, 58, 225)"};
+            border-radius: 5px; padding: 3px 6px;
+        }}
         QLabel#navSubhead {{ color: {accents['mini_text']}; }}
         QLabel#trimStatusPill {{
             background: {accents['tint']}; color: {accents['tint_text']}; border-color: {accents['tint_border']};
@@ -533,6 +498,47 @@ def app_stylesheet(day_mode):
         }}
         QTabBar::tab {{ background: {accents['soft']}; color: {accents['muted']}; }}
         QTabBar::tab:selected {{ background: {accents['tint']}; color: {accents['tint_text']}; }}
+        QScrollArea#sidebarScroll QScrollBar:vertical {{
+            background: {"#E8E2D6" if day_mode else "#102131"};
+            width: 10px; border-radius: 5px; margin: 0;
+        }}
+        QScrollArea#sidebarScroll QScrollBar::handle:vertical {{
+            background: {accents['tint_border']}; min-height: 28px; border-radius: 5px;
+        }}
+        QScrollArea#sidebarScroll QScrollBar::add-line:vertical,
+        QScrollArea#sidebarScroll QScrollBar::sub-line:vertical {{ height: 0; }}
+        QScrollArea#sidebarScroll QScrollBar::add-page:vertical,
+        QScrollArea#sidebarScroll QScrollBar::sub-page:vertical {{ background: transparent; }}
+        QTabWidget[sidebarTabs="true"]::pane {{
+            background: {"#FAF7F0" if day_mode else "#1A293C"};
+            border: 1px solid {accents['tint_border']};
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            top: -1px;
+        }}
+        QTabWidget#fileTabs QPushButton[variant="source"] {{ min-height: 25px; }}
+        QTabWidget[sidebarTabs="true"] QTabBar::tab {{
+            background: {accents['soft']}; color: {accents['muted']};
+            border: 1px solid {accents['tint_border']};
+            border-top: 3px solid {accents['tint_border']};
+            border-bottom: 1px solid {accents['tint_border']};
+            border-top-left-radius: 9px; border-top-right-radius: 9px;
+            border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+            font-size: 12px; padding: 5px 8px; margin-right: 3px;
+            margin-top: 2px;
+        }}
+        QTabWidget[sidebarTabs="true"] QTabBar::tab:hover {{
+            background: {accents['tint']}; color: {accents['tint_text']};
+        }}
+        QTabWidget[sidebarTabs="true"] QTabBar::tab:selected {{
+            background: {"#FAF7F0" if day_mode else "#1A293C"};
+            color: {accents['tint_text']};
+            border-top-color: {"#6151B2" if day_mode else "#F3E79B"};
+            border-bottom-color: {"#FAF7F0" if day_mode else "#1A293C"};
+            margin-top: 0;
+            padding-top: 7px;
+        }}
         QCheckBox::indicator:checked {{ background: {accents['secondary']}; border-color: {accents['secondary']}; }}
         QSlider::sub-page:horizontal {{ background: {accents['primary']}; }}
         QSlider::handle:horizontal {{ background: {accents['primary']}; border-color: {accents['primary_hover']}; }}
