@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 from cali.movement_analysis import (prepare_speed, align_speed, duration_weights,
                                summarize_cell, pearson, lag_correlations, analyze_cells)
 from cali.movement_dialog import MovementAnalysisDialog
-from cali.viewer import Viewer, TrackingAlignmentDialog
+from cali.viewer import Viewer
 from cali.caiman_results import CaImAnResults
 from test_caiman_results import write_cnmf_fixture
 
@@ -126,14 +126,13 @@ class MovementWorkflowTests(unittest.TestCase):
         pd.DataFrame({"frame_index": np.arange(6), "x": [0, 0, 1, 3, 5, 7],
                       "y": np.zeros(6), "speed": [0, 0, 10, 30, 40, 50],
                       "likelihood": np.ones(6)}).to_csv(self.path, index=False)
-        self.d = MovementAnalysisDialog(self.v, TrackingAlignmentDialog)
+        self.d = MovementAnalysisDialog(self.v)
         self.d.load_tracking_path(self.path)
         self.d.input_mode.setCurrentIndex(1)
         self.d.speed_column.setCurrentIndex(self.d.speed_column.findData("speed"))
         self.d.smoothing.setValue(0)
 
     def tearDown(self):
-        self.d.tracking_reader.close()
         self.d.close()
         self.v.close()
         self.folder.cleanup()

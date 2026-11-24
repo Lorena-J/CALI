@@ -14,14 +14,15 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget, QAbstractItemView, QHeaderView,
 )
 
+from .tracking import load_tracking_table, tracking_indices, build_video_times
 from .movement_analysis import prepare_speed, align_speed, analyze_cells, lag_correlations
 
 
 class MovementAnalysisDialog(QDialog):
-    def __init__(self, viewer, tracking_factory):
+    def __init__(self, viewer):
         super().__init__(viewer)
         self.viewer = viewer
-        self.tracking_reader = tracking_factory(viewer)
+        self.tracking_df = None
         self.tracking_path = None
         self.numeric_data = {}
         self.summary = self.context = self.behavior = None
@@ -279,11 +280,11 @@ class MovementAnalysisDialog(QDialog):
 
     def load_tracking_path(self, path):
         try:
-            table, numeric = self.tracking_reader.load_tracking_table(path)
+            table, numeric = load_tracking_table(path)
             if not numeric:
                 raise ValueError("No numeric tracking columns found.")
             self.invalidate()
-            self.tracking_reader.tracking_df = table
+            self.tracking_df = table
             self.numeric_data = numeric
             self.tracking_path = Path(path).resolve()
             for combo in (self.x, self.y, self.speed_column, self.confidence):
@@ -322,9 +323,11 @@ class MovementAnalysisDialog(QDialog):
             if not self.numeric_data or v.caiman is None or v.mini_t is None or v.camera_t is None:
                 raise ValueError("Load CaImAn, both TTL CSV files and behavior tracking first.")
             n_video = v.video.count if v.video.cap is not None else None
-            indices = self.tracking_reader.tracking_indices(n_video)
+            indices = tracking_indices(self.tracking_df, n_video)
             count = n_video if n_video is not None else int(indices[-1]) + 1
-            video_times = self.tracking_reader.build_video_times(count) / 1000
+            camera_times = v.visible_timeline_times()[1]
+            mapped = [v.video_index(i) for i in range(len(camera_times))]
+            video_times = build_video_times(count, camera_times, mapped) / 1000
             source_times = video_times[indices]
             confidence = self.numeric_data.get(self.confidence.currentData())
             if self.input_mode.currentIndex() == 0 and self.x.currentData() == self.y.currentData():

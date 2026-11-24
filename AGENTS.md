@@ -56,7 +56,14 @@ Validaciones del motor: [docs/processing-validation.md](docs/processing-validati
 
 | Archivo | Responsabilidad |
 | --- | --- |
-| `cali/viewer.py` | Entrada, `Viewer`, TTL, navegación, imágenes, recortes, exportaciones y `TrackingAlignmentDialog`. |
+| `cali/viewer.py` | Entrada, ventana principal, estado de las fuentes, navegación y resultados de calcio. |
+| `cali/timing.py` | Lectura de CSV TTL, intervalos, índices virtuales y reconstrucción de tiempos. |
+| `cali/readers.py` | Lectores de vídeo y TIFF con cachés acotadas. |
+| `cali/image_widgets.py` | Visores de imagen, recortes y contornos de ROI. |
+| `cali/theme.py` | Paletas y estilos de la interfaz. |
+| `cali/tracking.py` | Lectura de tracking, índices, interpolación y alineación sin Qt. |
+| `cali/tracking_dialog.py` | Controles, gráficos y exportaciones de alineación de tracking. |
+| `cali/video_exports.py` | Codificación de vídeo y escritura de metadatos y tablas de mapping. |
 | `cali/theme_toggle.py` | Selector de tema y transición visual. |
 | `cali/caiman_results.py` | Lectura HDF5 con h5py, trazas, footprints, calidad y correspondencia de muestras. No requiere CaImAn. |
 | `cali/calcium_pipeline.py` | Worker/CLI sin Qt: TIFF, canales, corrección de movimiento, CNMF y procedencia. |
