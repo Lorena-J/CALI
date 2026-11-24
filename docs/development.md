@@ -25,7 +25,15 @@ platform-complete lock for Conda, system libraries or the CaImAn environment.
 
 | Path | Contents |
 | --- | --- |
-| `cali/` | Application package: `viewer.py` (main window, TTL, tracking alignment), `caiman_results.py`, `calcium_pipeline.py` (CaImAn worker), `processing_dialog.py`, `movement_analysis.py`, `movement_dialog.py`. |
+| `cali/viewer.py` | Main window, shared source state, timeline/navigation and calcium browsing; delegates readers, tracking, themes and video encoding. |
+| `cali/timing.py`, `cali/tracking.py` | Qt-free TTL reading/reconstruction and tracking CSV/index/interpolation/alignment functions. |
+| `cali/readers.py` | Video/TIFF readers and bounded frame caches. |
+| `cali/image_widgets.py`, `cali/theme.py` | Image panels, crop/ROI rendering, viewer palettes and styles. |
+| `cali/theme_toggle.py` | Theme selector and visual transition. |
+| `cali/tracking_dialog.py` | Tracking alignment controls, plots and export interaction. |
+| `cali/video_exports.py` | Qt-free prefix/cropped/aligned video encoding and JSON/CSV sidecars; callers provide progress/cancellation callbacks. |
+| `cali/caiman_results.py`, `cali/calcium_pipeline.py`, `cali/processing_dialog.py` | CaImAn result reader, isolated processing worker and processing dialog. |
+| `cali/movement_analysis.py`, `cali/movement_dialog.py` | Numerical movement analysis and its Qt dialog. |
 | `cali/assets/icons/` | Interface icons and logos loaded at runtime. |
 | `tests/` | `unittest` suite with synthetic fixtures. |
 | `scripts/` | Generators for the CaImAn demo and the processing test pack. |
@@ -40,6 +48,17 @@ worker by file path (`<engine python> cali/calcium_pipeline.py`), not with
 `-m`: that way only the `cali/` folder joins the worker's `sys.path` and the
 engine never imports the viewer's own NumPy or Qt. `calcium_pipeline.py`
 therefore falls back to a plain `from caiman_results import ...`.
+
+Tracking and movement share the functions in `tracking.py`; movement analysis
+does not construct a tracking alignment dialog. `tracking.py` accepts explicit
+times, mapped frame indices and trim boundaries, leaving viewer state and Qt
+controls in the dialogs. Video export functions similarly receive data and a
+progress callback; the caller retains the existing cancellation/partial-output
+cleanup policy. Encoding, mapping and provenance formats remain unchanged.
+
+Calcium browsing stays in `Viewer` for now because its cursor, movie playback
+and source replacement share the main window state. A separate calcium panel
+can be considered later; this extraction does not change that workflow.
 
 ## Tests
 
@@ -57,10 +76,17 @@ suite does not require a CaImAn installation and does not prove a complete CNMF
 run or compatibility with real multichannel ScanImage recordings. See the
 [processing validation record](processing-validation.md) for separate engine runs.
 
+The module extraction also has focused checks for imports without Qt/CaImAn,
+prefix/cropped video correspondence, aligned repeats/blank coverage, early
+end-of-file, cancellation reporting and resource release after an encoding
+read failure. These are unit/integration checks, not a complete E2E suite.
+
 The application code is the `cali/` package. The `cali` command and
-`python -m cali` (`cali/__main__.py`) both start `cali.viewer.main`. Tests import modules as
-`cali.viewer`, `cali.caiman_results`, and so on, and mock targets use those
-names (for example `cali.viewer.QMessageBox`). Run `uv run cali` from the
+`python -m cali` (`cali/__main__.py`) both start `cali.viewer.main`. Tests import
+modules according to their responsibilities, for example `cali.timing`,
+`cali.tracking` and `cali.caiman_results`. Mock targets follow the module
+performing the interaction (for example `cali.tracking_dialog.QFileDialog`
+for tracking exports). Run `uv run cali` from the
 repository root for a normal interactive launch. Offscreen tests do not
 replace visual inspection or a normal-event-loop startup/shutdown check.
 
